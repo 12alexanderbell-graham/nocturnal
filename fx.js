@@ -8,7 +8,6 @@
 (function () {
   "use strict";
   var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var coarse = matchMedia("(pointer: coarse)").matches;   // phones and tablets
 
   var PALETTES = {
     // [base, body, light, accent] as 0..1 RGB
@@ -84,29 +83,30 @@
   }
 
   function trail(host) {
-    if (reduce || !matchMedia("(pointer: fine)").matches) return;
+    if (reduce) return;
+    var touch = !matchMedia("(pointer: fine)").matches;
     var c = document.createElement("canvas"); c.className = "trail"; c.setAttribute("aria-hidden", "true");
     host.insertBefore(c, host.firstChild);
-    var ctx = c.getContext("2d"), cells = [], CELL = 30, GAP = 3, LIFE = 1700, raf = 0, prev = null, step = 0, W = 0, H = 0;
+    var ctx = c.getContext("2d"), cells = [], CELL = 30, GAP = 3, LIFE = 1700, raf = 0, prev = null, step = 0, W = 0, H = 0, OX = 0;   // OX centres the grid across the panel
     // Sharp, at the screen's own resolution: every cell a clean rounded square with a soft glow of its own colour.
-    function fit() { var r = host.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height; c.width = Math.ceil(W * d); c.height = Math.ceil(H * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
+    function fit() { var r = host.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height; OX = (W % CELL) / 2; c.width = Math.ceil(W * d); c.height = Math.ceil(H * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
     // The colour drifts smoothly along the trail through the app's greens: mint, emerald, teal, pale mint.
     function tint(i) { var h = 158 + 14 * Math.sin(i / 9), l = 58 + 12 * Math.sin(i / 13 + 1); return "hsl(" + h.toFixed(1) + " 72% " + l.toFixed(1) + "%)"; }
     function cell(gx, gy, color, alpha, shrink, glow) {
-      var pad = GAP + shrink, x = gx * CELL + pad, y = gy * CELL + pad, sz = CELL - pad * 2;
+      var pad = GAP + shrink, x = OX + gx * CELL + pad, y = gy * CELL + pad, sz = CELL - pad * 2;
       ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = glow;
       ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, sz, sz, 7); else ctx.rect(x, y, sz, sz); ctx.fill();
     }
     fit(); addEventListener("resize", fit);
     function add(x, y, now) {
-      var gx = Math.floor(x / CELL), gy = Math.floor(y / CELL);
+      var gx = Math.floor((x - OX) / CELL), gy = Math.floor(y / CELL);
       for (var i = cells.length - 1; i >= Math.max(0, cells.length - 6); i--) if (cells[i].gx === gx && cells[i].gy === gy) { cells[i].born = now; return; }
       cells.push({ gx: gx, gy: gy, born: now, color: tint(step++) });
       if (step === 40) hint();
     }
     var cursor = { x: 0, y: 0 };
-    host.addEventListener("pointermove", function (e) {
-      var r = host.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, now = performance.now();
+    function move(cx, cy) {
+      var r = host.getBoundingClientRect(), x = cx - r.left, y = cy - r.top, now = performance.now();
       cursor.x = x; cursor.y = y;
       if (game) return;
       if (prev) {   // fill the gap between two samples so a quick flick still leaves an unbroken trail
@@ -115,8 +115,16 @@
       } else add(x, y, now);
       prev = { x: x, y: y };
       if (!raf) raf = requestAnimationFrame(frame);
-    });
-    host.addEventListener("pointerleave", function () { prev = null; });
+    }
+    if (!touch) {
+      host.addEventListener("pointermove", function (e) { move(e.clientX, e.clientY); });
+      host.addEventListener("pointerleave", function () { prev = null; });
+    } else {
+      // On a phone the finger leaves the trail, even mid-scroll; while playing it steers.
+      host.addEventListener("touchstart", function (e) { prev = null; var t = e.touches[0], r = host.getBoundingClientRect(); cursor.x = t.clientX - r.left; cursor.y = t.clientY - r.top; }, { passive: true });
+      host.addEventListener("touchmove", function (e) { var t = e.touches[0]; move(t.clientX, t.clientY); if (game && !game.over) e.preventDefault(); }, { passive: false });
+      host.addEventListener("touchend", function () { prev = null; }, { passive: true });
+    }
     function frame(now) {
       raf = 0;
       if (game) return;
@@ -133,15 +141,25 @@
     // ---------- Snake: click anywhere empty in the green, then steer with the cursor ----------
     var ui = host.querySelector("[data-snake]"), uiScore = ui.querySelector("[data-snake-score]"), uiMsg = ui.querySelector("[data-snake-msg]");
     var hintEl = host.querySelector("[data-snake-hint]"), game = null, best = 0;
+    if (touch) hintEl.textContent = "Tap anywhere in the green to play Snake";
     try { best = Number(localStorage.getItem("nocturnal.snake.best")) || 0; } catch (e) {}
     function hint() {
       try { if (localStorage.getItem("nocturnal.snake.hinted")) return; localStorage.setItem("nocturnal.snake.hinted", "1"); } catch (e) {}
       hintEl.classList.add("on"); setTimeout(function () { hintEl.classList.remove("on"); }, 4200);
     }
-    var EMPTY = "a, button, input, code, pre, summary, h1, p, figure, .get, .top nav, .brand, .chip";
+    // Empty means no control, picture or line of text under the pointer; the space beside a short line still counts.
+    var SOLID = "a, button, input, code, pre, summary, figure, .chip, .tabs, .cmd, .stage > *";
+    function onText(t, x, y) {
+      var block = t.closest("h1, h2, p");
+      if (!block) return false;
+      var r = document.createRange(); r.selectNodeContents(block);
+      return Array.prototype.some.call(r.getClientRects(), function (q) { return x > q.left - 8 && x < q.right + 8 && y > q.top - 6 && y < q.bottom + 6; });
+    }
+    ui.addEventListener("click", function (e) { e.stopPropagation(); if (game) stop(); });   // the score pill is also the way out
     host.addEventListener("click", function (e) {
+      if (ui.contains(e.target)) return;
       if (game && !game.over) return;
-      if (!game && e.target.closest(EMPTY)) return;
+      if (!game && (e.target.closest(SOLID) || onText(e.target, e.clientX, e.clientY))) return;
       start();
     });
     addEventListener("keydown", function (e) { if (game && e.key === "Escape") stop(); });
@@ -161,9 +179,10 @@
       // The field is the part of the green on screen, minus the row the score sits in.
       var r = host.getBoundingClientRect(), top = Math.max(0, -r.top), bottom = Math.min(H, innerHeight - r.top);
       var x0 = 0, x1 = Math.floor(W / CELL) - 1, y0 = Math.ceil(top / CELL) + 3, y1 = Math.floor(bottom / CELL) - 1;
-      var hx = Math.min(x1 - 2, Math.max(x0 + 4, Math.floor(cursor.x / CELL))), hy = Math.min(y1 - 1, Math.max(y0 + 1, Math.floor(cursor.y / CELL)));
-      game = { x0: x0, x1: x1, y0: y0, y1: y1, dir: { x: 1, y: 0 }, body: [], score: 0, over: false, last: 0, flash: 0 };
-      for (var i = 0; i < 4; i++) game.body.push({ x: hx - i, y: hy });
+      var hx = Math.min(x1 - 4, Math.max(x0 + 4, Math.floor((cursor.x - OX) / CELL))), hy = Math.min(y1 - 1, Math.max(y0 + 1, Math.floor(cursor.y / CELL)));
+      var dx = hx > (x0 + x1) / 2 ? -1 : 1;   // set off towards the middle, never straight at the nearest wall
+      game = { x0: x0, x1: x1, y0: y0, y1: y1, dir: { x: dx, y: 0 }, body: [], score: 0, over: false, last: 0, flash: 0 };
+      for (var i = 0; i < 4; i++) game.body.push({ x: hx - i * dx, y: hy });
       game.food = food();
       cells = []; host.classList.add("playing"); ui.hidden = false; ui.style.top = (game.y0 * CELL - 64) + "px"; hintEl.classList.remove("on");
       say(); cancelAnimationFrame(raf); raf = requestAnimationFrame(play);
@@ -174,11 +193,11 @@
     function say() {
       uiScore.textContent = String(game.score);
       uiMsg.textContent = game.over
-        ? (game.score && game.score >= best ? "New best. Click to play again" : "Best " + best + ". Click to play again")
-        : "Steer with your cursor · Esc to leave";
+        ? (game.score && game.score >= best ? "New best. " : "Best " + best + ". ") + (touch ? "Tap to go again" : "Click to play again")
+        : (touch ? "Drag to steer · tap here to leave" : "Steer with your cursor · Esc to leave");
     }
     function turn() {
-      var h = game.body[0], dx = Math.floor(cursor.x / CELL) - h.x, dy = Math.floor(cursor.y / CELL) - h.y, d = game.dir, want = d;
+      var h = game.body[0], dx = Math.floor((cursor.x - OX) / CELL) - h.x, dy = Math.floor(cursor.y / CELL) - h.y, d = game.dir, want = d;
       if (Math.abs(dx) >= Math.abs(dy) && dx) want = { x: Math.sign(dx), y: 0 };
       else if (dy) want = { x: 0, y: Math.sign(dy) };
       if (want.x === -d.x && want.y === -d.y) {   // never straight back into itself: go round instead
@@ -206,7 +225,7 @@
       if (!game.over && now - game.last >= every) { tick(); game.last = now; }
       ctx.clearRect(0, 0, W, H);
       ctx.globalAlpha = 0.35; ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 1.5; ctx.shadowBlur = 0;
-      ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(game.x0 * CELL + 1, game.y0 * CELL + 1, (game.x1 - game.x0 + 1) * CELL - 2, (game.y1 - game.y0 + 1) * CELL - 2, 18); ctx.stroke();
+      ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(OX + game.x0 * CELL + 1, game.y0 * CELL + 1, (game.x1 - game.x0 + 1) * CELL - 2, (game.y1 - game.y0 + 1) * CELL - 2, 18); ctx.stroke();
       var pulse = 0.5 + 0.5 * Math.sin(now / 180);
       cell(game.food.x, game.food.y, "#f4fff9", 0.75 + 0.25 * pulse, 2 + pulse * 2, 18 + 10 * pulse);
       var fade = game.over ? Math.max(0.25, 1 - (now - game.flash) / 900) : 1;
@@ -220,7 +239,7 @@
   }
 
   document.querySelectorAll("canvas[data-flow]").forEach(function (cv) {
-    flow(cv, cv.dataset.flow, cv.dataset.k ? Number(cv.dataset.k) : 1, cv.hasAttribute("data-small") && coarse);
+    flow(cv, cv.dataset.flow, cv.dataset.k ? Number(cv.dataset.k) : 1, false);
   });
   var hero = document.querySelector("[data-trail]");
   if (hero) trail(hero);

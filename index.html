@@ -12,12 +12,21 @@
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://nocturnal.tools/">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Nocturnal">
+<meta property="og:image:alt" content="Nocturnal. Close the lid. Your AI keeps working.">
+<meta name="twitter:title" content="Nocturnal: close the lid, your AI keeps working">
+<meta name="twitter:description" content="Keeps your laptop awake with the lid shut while your AI agents work, then lets it sleep. Free and open source.">
+<meta name="twitter:image" content="https://nocturnal.tools/og.jpg">
+<meta name="twitter:image:alt" content="Nocturnal. Close the lid. Your AI keeps working.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@12alexanderbell">
 <meta name="theme-color" content="#05281a">
 <link rel="canonical" href="https://nocturnal.tools/">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Nocturnal","applicationCategory":"UtilitiesApplication","operatingSystem":"macOS 14+, Windows 10/11, Linux","description":"Keeps your laptop awake with the lid shut while your AI agents work, then lets it sleep when the work is done.","url":"https://nocturnal.tools/","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/licenses/MIT"}</script>
-<link rel="icon" href="favicon.png">
+<link rel="icon" href="favicon-48.png" sizes="48x48" type="image/png">
+<link rel="icon" href="favicon-96.png" sizes="96x96" type="image/png">
+<link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+<link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root {
@@ -64,10 +73,10 @@
   .trail { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
   .hero > .wrap { position: relative; z-index: 1; transition: opacity .35s linear; }
   /* Snake: the page steps back while you play */
-  .hero.playing { cursor: crosshair; -webkit-user-select: none; user-select: none; }
+  .hero.playing { cursor: crosshair; -webkit-user-select: none; user-select: none; touch-action: none; }
   .hero.playing > .wrap { opacity: .1; pointer-events: none; }
   .snake { position: absolute; z-index: 3; left: 50%; top: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 980px;
-    background: rgba(4,18,11,.55); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); color: #fff; font-size: 14px; white-space: nowrap; pointer-events: none; }
+    background: rgba(4,18,11,.55); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); color: #fff; font-size: 14px; white-space: nowrap; padding-right: 16px; cursor: pointer; }
   .snake[hidden] { display: none; }
   .snake b { font: 700 15px var(--round); min-width: 2.2em; text-align: center; padding: 4px 10px; border-radius: 980px; background: #fff; color: var(--deep); font-variant-numeric: tabular-nums; }
   .snake-hint { position: absolute; z-index: 3; left: 50%; bottom: 26px; transform: translate(-50%, 6px); padding: 9px 16px; border-radius: 980px; background: rgba(255,255,255,.92); color: var(--deep); font-size: 14px; font-weight: 600;
@@ -155,7 +164,7 @@
   .lid .fine-print { position: absolute; left: 0; right: 0; padding: 0 24px; text-wrap: balance; bottom: max(22px, env(safe-area-inset-bottom)); text-align: center; font-size: 13px; opacity: .75; }
 
   /* ---------- Floating nav: once the hero is gone, a small bar follows you down the page ---------- */
-  .float { position: fixed; z-index: 50; top: max(12px, env(safe-area-inset-top)); left: 50%; display: flex; align-items: center; gap: 2px;
+  .float { position: fixed; z-index: 50; top: max(12px, env(safe-area-inset-top)); left: 50%; width: max-content; display: flex; align-items: center; gap: 2px;
     padding: 6px 6px 6px 12px; border-radius: 980px; background: rgba(255,255,255,.86); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
     box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.12); opacity: 0; visibility: hidden; transform: translate(-50%, -6px);
     transition: opacity .2s linear, transform .2s var(--ease), visibility 0s .2s; }
@@ -169,7 +178,22 @@
   .float .l.on { color: var(--deep); font-weight: 600; }
   .float .lens { position: absolute; z-index: 0; top: 6px; bottom: 6px; left: 0; width: 0; border-radius: 980px; background: rgba(16,102,59,.12); opacity: 0;
     transition: transform .35s var(--ease), width .35s var(--ease), opacity .2s linear; }
-  .float .where { display: none; font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap; margin: 0 6px 0 -2px; transition: opacity .2s linear; }
+  .float .where { display: none; }
+  .float .sheet { display: none; }
+  /* Phones: the section links fold into a menu; the bar always says where you are and keeps one width */
+  @media (max-width: 820px) {
+    .float .where { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 134px; margin: 0 2px 0 0; padding: 8px 10px 8px 12px; border: 0; border-radius: 980px;
+      background: rgba(16,102,59,.09); color: var(--accent); font: 600 14px/1.15 var(--font); letter-spacing: -0.01em; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .float .where svg { flex: none; transition: transform .2s var(--ease); }
+    .float .where[aria-expanded="true"] svg { transform: rotate(180deg); }
+    .float .sheet { display: block; position: absolute; top: calc(100% + 8px); left: 0; width: 100%; padding: 6px; border-radius: 22px; background: #fff;
+      -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px); box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 14px 34px rgba(0,0,0,.16);
+      opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: 50% 0; visibility: hidden; transition: opacity .18s linear, transform .2s var(--ease), visibility 0s .2s; }
+    .float.open .sheet { opacity: 1; transform: none; visibility: visible; transition: opacity .18s linear, transform .2s var(--ease), visibility 0s; }
+    .float .sheet a { display: block; padding: 12px 14px; border-radius: 16px; color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 500; -webkit-tap-highlight-color: transparent; }
+    .float .sheet a.on { background: rgba(16,102,59,.10); color: var(--deep); font-weight: 600; }
+    @media (max-width: 359px) { .float .brand { font-size: 0; margin-right: 4px; } }
+  }
   .float .go { margin-left: 6px; color: #fff; background: var(--deep); text-decoration: none; font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 980px; white-space: nowrap; }
 
   /* The agents named in the lede, as soft pills */
@@ -302,7 +326,6 @@
     .st { grid-template-columns: minmax(0, 1fr); gap: 16px; text-align: center; }
     .thumb { height: 110px; }
     .st p { margin: 0 auto; }
-    .float .where { display: inline; }
     .say { padding: 96px 0 88px; }
     .hero, .end, .site { margin-inline: 6px; border-radius: 24px; }
     .site .cols { grid-template-columns: 1fr 1fr; }
@@ -343,7 +366,13 @@
 
 <nav class="float" aria-label="Sections" data-float>
   <a class="brand" href="#"><img src="icon.png" alt="" width="24" height="24">Nocturnal</a>
-  <span class="where" aria-hidden="true"></span>
+  <button class="where" type="button" aria-expanded="false" aria-controls="sheet" aria-label="Sections"><span data-where>Sections</span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <div class="sheet" id="sheet">
+    <a href="#does-h" data-sec="does">How it works</a>
+    <a href="#connect-h" data-sec="connect">Connect your agent</a>
+    <a href="#phone-h" data-sec="phone">Phone</a>
+    <a href="#faq-h" data-sec="faq">Questions</a>
+  </div>
   <span class="lens" aria-hidden="true"></span>
   <a class="l" href="#does-h" data-sec="does">How it works</a>
   <a class="l" href="#connect-h" data-sec="connect">Connect</a>
@@ -663,10 +692,16 @@ Never turn off the heat guard or lower the battery limit; Nocturnal won't let yo
 
   // ---- Floating nav: shown once the hero's own nav has scrolled away ----
   var float = document.querySelector("[data-float]"), heroTop = document.querySelector(".hero .top");
-  new IntersectionObserver(function (e) { float.classList.toggle("on", !e[0].isIntersecting); }).observe(heroTop);
+  new IntersectionObserver(function (e) { float.classList.toggle("on", !e[0].isIntersecting); if (e[0].isIntersecting) openMenu(false); }).observe(heroTop);
 
   // ---- ...and shows where you are: a lens slides under the section you're reading ----
-  var navLinks = float.querySelectorAll(".l[data-sec]"), navLens = float.querySelector(".lens"), where = float.querySelector(".where");
+  var navLinks = float.querySelectorAll(".l[data-sec]"), navLens = float.querySelector(".lens"), where = float.querySelector("[data-where]");
+  var whereBtn = float.querySelector(".where"), sheetLinks = float.querySelectorAll(".sheet a");
+  function openMenu(on) { float.classList.toggle("open", on); whereBtn.setAttribute("aria-expanded", on); }
+  whereBtn.addEventListener("click", function (e) { e.stopPropagation(); openMenu(!float.classList.contains("open")); });
+  sheetLinks.forEach(function (a) { a.addEventListener("click", function () { openMenu(false); }); });
+  document.addEventListener("click", function (e) { if (!float.contains(e.target)) openMenu(false); });
+  addEventListener("keydown", function (e) { if (e.key === "Escape") openMenu(false); });
   var secs = document.querySelectorAll("section[data-sec]"), endEl = document.querySelector(".end"), here = null, navRaf = 0;
   function placeLens(instant) {
     var on = null;
@@ -675,7 +710,8 @@ Never turn off the heat guard or lower the battery limit; Nocturnal won't let yo
     navLens.style.opacity = on && on.offsetWidth ? 1 : 0;
     if (on && on.offsetWidth) { navLens.style.width = on.offsetWidth + "px"; navLens.style.transform = "translateX(" + on.offsetLeft + "px)"; }
     if (instant) { navLens.offsetWidth; navLens.style.transition = ""; }
-    where.textContent = on ? on.textContent : "";
+    where.textContent = on ? on.textContent : "Sections";
+    sheetLinks.forEach(function (a) { a.classList.toggle("on", a.dataset.sec === here); });
   }
   function track() {
     navRaf = 0;
@@ -754,6 +790,6 @@ Never turn off the heat guard or lower the battery limit; Nocturnal won't let yo
 </script>
 <!-- Page views only: Cloudflare Web Analytics, no cookies. Not on the phone page. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "e9fed4c288994440ae4cbd34ac664887"}'></script>
-<script src="fx.js?v=3" defer></script>
+<script src="fx.js?v=4" defer></script>
 </body>
 </html>
