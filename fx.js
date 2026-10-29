@@ -139,10 +139,8 @@
     }
 
     // ---------- Snake: click anywhere empty in the green, then steer with the cursor ----------
-    var ui = host.querySelector("[data-snake]"), uiScore = ui.querySelector("[data-snake-score]"), uiMsg = ui.querySelector("[data-snake-msg]");
-    var hintEl = host.querySelector("[data-snake-hint]"), game = null, best = 0;
+    var hintEl = host.querySelector("[data-snake-hint]"), game = null;
     if (touch) hintEl.textContent = "Tap anywhere in the green to play Snake";
-    try { best = Number(localStorage.getItem("nocturnal.snake.best")) || 0; } catch (e) {}
     function hint() {
       try { if (localStorage.getItem("nocturnal.snake.hinted")) return; localStorage.setItem("nocturnal.snake.hinted", "1"); } catch (e) {}
       hintEl.classList.add("on"); setTimeout(function () { hintEl.classList.remove("on"); }, 4200);
@@ -155,9 +153,7 @@
       var r = document.createRange(); r.selectNodeContents(block);
       return Array.prototype.some.call(r.getClientRects(), function (q) { return x > q.left - 8 && x < q.right + 8 && y > q.top - 6 && y < q.bottom + 6; });
     }
-    ui.addEventListener("click", function (e) { e.stopPropagation(); if (game) stop(); });   // the score pill is also the way out
     host.addEventListener("click", function (e) {
-      if (ui.contains(e.target)) return;
       if (game && !game.over) return;
       if (!game && (e.target.closest(SOLID) || onText(e.target, e.clientX, e.clientY))) return;
       start();
@@ -176,25 +172,19 @@
     if (location.hash === "#snake-debug") window.__snake = function () { return game; };
     function start() {
       fit();
-      // The field is the part of the green on screen, minus the row the score sits in.
+      // The field is the part of the green on screen; its edges are the walls.
       var r = host.getBoundingClientRect(), top = Math.max(0, -r.top), bottom = Math.min(H, innerHeight - r.top);
-      var x0 = 0, x1 = Math.floor(W / CELL) - 1, y0 = Math.ceil(top / CELL) + 3, y1 = Math.floor(bottom / CELL) - 1;
+      var x0 = 0, x1 = Math.floor(W / CELL) - 1, y0 = Math.ceil(top / CELL), y1 = Math.floor(bottom / CELL) - 1;
       var hx = Math.min(x1 - 4, Math.max(x0 + 4, Math.floor((cursor.x - OX) / CELL))), hy = Math.min(y1 - 1, Math.max(y0 + 1, Math.floor(cursor.y / CELL)));
       var dx = hx > (x0 + x1) / 2 ? -1 : 1;   // set off towards the middle, never straight at the nearest wall
       game = { x0: x0, x1: x1, y0: y0, y1: y1, dir: { x: dx, y: 0 }, body: [], score: 0, over: false, last: 0, flash: 0 };
       for (var i = 0; i < 4; i++) game.body.push({ x: hx - i * dx, y: hy });
       game.food = food();
-      cells = []; host.classList.add("playing"); ui.hidden = false; ui.style.top = (game.y0 * CELL - 64) + "px"; hintEl.classList.remove("on");
-      say(); cancelAnimationFrame(raf); raf = requestAnimationFrame(play);
+      cells = []; host.classList.add("playing"); hintEl.classList.remove("on");
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(play);
     }
     function stop() {
-      game = null; host.classList.remove("playing"); ui.hidden = true; ctx.clearRect(0, 0, W, H);
-    }
-    function say() {
-      uiScore.textContent = String(game.score);
-      uiMsg.textContent = game.over
-        ? (game.score && game.score >= best ? "New best. " : "Best " + best + ". ") + (touch ? "Tap to go again" : "Click to play again")
-        : (touch ? "Drag to steer · tap here to leave" : "Steer with your cursor · Esc to leave");
+      game = null; host.classList.remove("playing"); ctx.clearRect(0, 0, W, H);
     }
     function turn() {
       var h = game.body[0], dx = Math.floor((cursor.x - OX) / CELL) - h.x, dy = Math.floor(cursor.y / CELL) - h.y, d = game.dir, want = d;
@@ -212,11 +202,10 @@
       var body = grows ? game.body : game.body.slice(0, -1);
       if (n.x < game.x0 || n.y < game.y0 || n.x > game.x1 || n.y > game.y1 || body.some(function (b) { return b.x === n.x && b.y === n.y; })) {
         game.over = true; game.flash = performance.now();
-        if (game.score > best) { best = game.score; try { localStorage.setItem("nocturnal.snake.best", String(best)); } catch (e) {} }
-        say(); return;
+        return;
       }
       game.body.unshift(n);
-      if (grows) { game.score++; game.food = food(); say(); } else game.body.pop();
+      if (grows) { game.score++; game.food = food(); } else game.body.pop();
     }
     function play(now) {
       raf = 0;
@@ -224,8 +213,6 @@
       var every = Math.max(55, 110 - game.score * 3);   // a little faster with every bite
       if (!game.over && now - game.last >= every) { tick(); game.last = now; }
       ctx.clearRect(0, 0, W, H);
-      ctx.globalAlpha = 0.35; ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 1.5; ctx.shadowBlur = 0;
-      ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(OX + game.x0 * CELL + 1, game.y0 * CELL + 1, (game.x1 - game.x0 + 1) * CELL - 2, (game.y1 - game.y0 + 1) * CELL - 2, 18); ctx.stroke();
       var pulse = 0.5 + 0.5 * Math.sin(now / 180);
       cell(game.food.x, game.food.y, "#f4fff9", 0.75 + 0.25 * pulse, 2 + pulse * 2, 18 + 10 * pulse);
       var fade = game.over ? Math.max(0.25, 1 - (now - game.flash) / 900) : 1;

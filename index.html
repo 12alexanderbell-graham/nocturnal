@@ -75,10 +75,6 @@
   /* Snake: the page steps back while you play */
   .hero.playing { cursor: crosshair; -webkit-user-select: none; user-select: none; touch-action: none; }
   .hero.playing > .wrap { opacity: .1; pointer-events: none; }
-  .snake { position: absolute; z-index: 3; left: 50%; top: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 980px;
-    background: rgba(4,18,11,.55); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); color: #fff; font-size: 14px; white-space: nowrap; padding-right: 16px; cursor: pointer; }
-  .snake[hidden] { display: none; }
-  .snake b { font: 700 15px var(--round); min-width: 2.2em; text-align: center; padding: 4px 10px; border-radius: 980px; background: #fff; color: var(--deep); font-variant-numeric: tabular-nums; }
   .snake-hint { position: absolute; z-index: 3; left: 50%; bottom: 26px; transform: translate(-50%, 6px); padding: 9px 16px; border-radius: 980px; background: rgba(255,255,255,.92); color: var(--deep); font-size: 14px; font-weight: 600;
     white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .3s linear, transform .3s var(--ease); }
   .snake-hint.on { opacity: 1; transform: translate(-50%, 0); }
@@ -165,7 +161,7 @@
 
   /* ---------- Floating nav: once the hero is gone, a small bar follows you down the page ---------- */
   .float { position: fixed; z-index: 50; top: max(12px, env(safe-area-inset-top)); left: 50%; width: max-content; display: flex; align-items: center; gap: 2px;
-    padding: 6px 6px 6px 12px; border-radius: 980px; background: rgba(255,255,255,.86); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
+    padding: 6px 6px 6px 12px; border-radius: 980px; background: rgba(255,255,255,.95); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
     box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.12); opacity: 0; visibility: hidden; transform: translate(-50%, -6px);
     transition: opacity .2s linear, transform .2s var(--ease), visibility 0s .2s; }
   .float.on { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity .2s linear, transform .2s var(--ease), visibility 0s; }
@@ -333,7 +329,7 @@
     .end { padding: 80px 0; }
     .lid-bg { inset: 6px; border-radius: 24px; }
     .connect { padding-top: 88px; }
-    .stage { height: clamp(300px, 82vw, 420px); margin-top: 40px; }
+    .stage { height: clamp(300px, 82vw, 420px); margin-top: 8px; }
     .stage .mac { left: 0; width: 47%; transform: none; }
     .stage .phone { left: 35%; width: 34%; transform: none; }
     .stage .phone.app { left: 66%; width: 34%; transform: none; }
@@ -384,7 +380,6 @@
 <header class="ground hero" data-trail>
   <canvas class="flow-bg" data-flow="green" data-k="0.8" aria-hidden="true"></canvas>
   <i class="glow a"></i><i class="glow b"></i><i class="glow c"></i>
-  <div class="snake" data-snake hidden aria-live="polite"><span>Snake</span><b data-snake-score>0</b><span data-snake-msg></span></div>
   <div class="snake-hint" data-snake-hint aria-hidden="true">Click anywhere in the green to play Snake</div>
   <div class="wrap">
     <div class="top">
@@ -691,8 +686,9 @@ Never turn off the heat guard or lower the battery limit; Nocturnal won't let yo
   document.getElementById("copy-prompt").addEventListener("click", function () { copy(this, document.getElementById("prompt").textContent); });
 
   // ---- Floating nav: shown once the hero's own nav has scrolled away ----
-  var float = document.querySelector("[data-float]"), heroTop = document.querySelector(".hero .top");
-  new IntersectionObserver(function (e) { float.classList.toggle("on", !e[0].isIntersecting); if (e[0].isIntersecting) openMenu(false); }).observe(heroTop);
+  var float = document.querySelector("[data-float]");
+  // Only once the green has gone past the top of the screen, so the bar never sits on top of the hero
+  new IntersectionObserver(function (e) { float.classList.toggle("on", !e[0].isIntersecting); if (e[0].isIntersecting) openMenu(false); }, { rootMargin: "-10px 0px 0px 0px" }).observe(document.querySelector(".hero"));
 
   // ---- ...and shows where you are: a lens slides under the section you're reading ----
   var navLinks = float.querySelectorAll(".l[data-sec]"), navLens = float.querySelector(".lens"), where = float.querySelector("[data-where]");
@@ -790,6 +786,6 @@ Never turn off the heat guard or lower the battery limit; Nocturnal won't let yo
 </script>
 <!-- Page views only: Cloudflare Web Analytics, no cookies. Not on the phone page. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "e9fed4c288994440ae4cbd34ac664887"}'></script>
-<script src="fx.js?v=4" defer></script>
+<script src="fx.js?v=5" defer></script>
 </body>
 </html>
