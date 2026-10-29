@@ -86,15 +86,16 @@
     if (reduce || !matchMedia("(pointer: fine)").matches) return;
     var c = document.createElement("canvas"); c.className = "trail"; c.setAttribute("aria-hidden", "true");
     host.insertBefore(c, host.firstChild);
-    var ctx = c.getContext("2d"), cells = [], CELL = 34, LIFE = 1800, raf = 0, prev = null, hue = 0;
-    var COLORS = ["#40d69c", "#2dd4bf", "#8b9bd6", "#a7f3d0", "#10b981", "#7c8ce0"];
-    // Drawn at a quarter of the size and scaled up by the browser: the scaling is the soft blur, for free.
-    function fit() { var r = host.getBoundingClientRect(), d = 0.25; c.width = Math.ceil(r.width * d); c.height = Math.ceil(r.height * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
+    var ctx = c.getContext("2d"), cells = [], CELL = 30, GAP = 3, LIFE = 1700, raf = 0, prev = null, step = 0;
+    // Sharp, at the screen's own resolution: every cell a clean rounded square with a soft glow of its own colour.
+    function fit() { var r = host.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); c.width = Math.ceil(r.width * d); c.height = Math.ceil(r.height * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
+    // The colour drifts smoothly along the trail through the app's greens: mint, emerald, teal, pale mint.
+    function tint(i) { var h = 158 + 14 * Math.sin(i / 9), l = 58 + 12 * Math.sin(i / 13 + 1); return "hsl(" + h.toFixed(1) + " 72% " + l.toFixed(1) + "%)"; }
     fit(); addEventListener("resize", fit);
     function add(x, y, now) {
       var gx = Math.floor(x / CELL), gy = Math.floor(y / CELL);
       for (var i = cells.length - 1; i >= Math.max(0, cells.length - 6); i--) if (cells[i].gx === gx && cells[i].gy === gy) { cells[i].born = now; return; }
-      cells.push({ gx: gx, gy: gy, born: now, color: COLORS[(hue++ >> 2) % COLORS.length] });
+      cells.push({ gx: gx, gy: gy, born: now, color: tint(step++) });
     }
     host.addEventListener("pointermove", function (e) {
       var r = host.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, now = performance.now();
@@ -112,10 +113,12 @@
       cells = cells.filter(function (k) { return now - k.born < LIFE; });
       cells.forEach(function (k) {
         var a = 1 - (now - k.born) / LIFE;
-        ctx.globalAlpha = Math.min(1, a * 1.4); ctx.fillStyle = k.color;
-        var pad = (1 - a) * 8, x = k.gx * CELL + pad, y = k.gy * CELL + pad, s = CELL - pad * 2;   // cells shrink as they fade
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, s, s, 6); ctx.fill(); } else ctx.fillRect(x, y, s, s);
+        var e = a * a * (3 - 2 * a);                                    // eased, so cells linger then go
+        var pad = GAP + (1 - e) * 7, x = k.gx * CELL + pad, y = k.gy * CELL + pad, s = CELL - pad * 2;   // and shrink as they fade
+        ctx.globalAlpha = e * 0.95; ctx.fillStyle = k.color; ctx.shadowColor = k.color; ctx.shadowBlur = 16 * e;
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, s, s, 7); else ctx.rect(x, y, s, s); ctx.fill();
       });
+      ctx.shadowBlur = 0;
       if (cells.length) raf = requestAnimationFrame(frame);
     }
   }
