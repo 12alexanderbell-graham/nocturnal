@@ -7,7 +7,7 @@ import Security
 /// It's kept in the shared keychain group (the first entry of keychain-access-groups in both the app's and the
 /// widgets' entitlements, so items land there without naming it), which lets the widgets' buttons reach the computer.
 nonisolated enum PairingStore {
-    private static let service = "com.alexander.NocturnalPhone.pairing"
+    private static let service = "tools.nocturnal.pairing"
     private static let account = "computer"
 
     private static var query: [String: Any] {

@@ -17,10 +17,15 @@ echo "Building…"
 /usr/bin/xcodebuild -project Nocturnal.xcodeproj -scheme Nocturnal -configuration Release -destination 'generic/platform=macOS' \
   -derivedDataPath "$DD" ONLY_ACTIVE_ARCH=NO ARCHS="arm64 x86_64" \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$IDENTITY" DEVELOPMENT_TEAM="$TEAM" \
-  ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS="--timestamp" build | tail -3
+  ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS="--timestamp" \
+  CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO build | tail -3
+# (A plain build otherwise adds the debugging entitlement get-task-allow, which notarization refuses.)
 APP="$DD/Build/Products/Release/Nocturnal.app"
 VERSION=$(/usr/bin/defaults read "$APP/Contents/Info" CFBundleShortVersionString)
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP"
+if /usr/bin/codesign -d --entitlements - "$APP" 2>/dev/null | grep -q get-task-allow; then
+  echo "The app still asks for get-task-allow; notarization would refuse it." >&2; exit 1
+fi
 mkdir -p dist
 ZIP="dist/Nocturnal-$VERSION-mac.zip"
 rm -f "$ZIP"

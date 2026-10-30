@@ -9,7 +9,7 @@ Everything App Store Connect asks for, ready to paste. The screenshots are made 
 |---|---|
 | Name | Nocturnal (if taken: Nocturnal: Lid Shut AI) |
 | Subtitle | Lid shut. AI keeps working. |
-| Bundle ID | com.alexander.NocturnalPhone |
+| Bundle ID | tools.nocturnal.ios (widgets: tools.nocturnal.ios.widgets) |
 | SKU | nocturnal-ios |
 | Primary category | Utilities |
 | Secondary category | Developer Tools |
@@ -85,7 +85,7 @@ encryption and implements none itself.
 
 ## Checklist
 
-1. In Xcode, pick your team under Signing & Capabilities for **both** targets (NocturnalPhone and NocturnalWidgetsExtension). Xcode registers the app group `group.com.alexander.NocturnalPhone` and the shared keychain group.
+1. In Xcode, pick your team under Signing & Capabilities for **both** targets (NocturnalPhone and NocturnalWidgetsExtension). The app IDs and the app group `group.tools.nocturnal` are registered on the developer site.
 2. Product › Archive with "Any iOS Device" selected, then Distribute App › App Store Connect › Upload.
 3. In App Store Connect: paste the fields above, upload the five screenshots in order, fill App Privacy (Data Not Collected), add the build, and Submit for Review.
 4. Screenshots: run the UI test `testMarketingShots` (the app's screens) and the unit test `WidgetShots` (the widgets); both write to `dist/review` next to the project. Open `appstore-screenshots.html` beside those images and save each of the five at 1320 × 2868.

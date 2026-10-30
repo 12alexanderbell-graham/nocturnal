@@ -59,7 +59,7 @@ nonisolated struct Status: Codable, Equatable, Sendable {
 
 /// The status in the app group, shared by the app and the widgets.
 nonisolated enum StatusStore {
-    static let group = "group.com.alexander.NocturnalPhone"
+    static let group = "group.tools.nocturnal"
     private static let key = "status"
 
     static func load() -> Status? {
