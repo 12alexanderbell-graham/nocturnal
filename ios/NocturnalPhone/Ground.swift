@@ -34,15 +34,7 @@ struct Ground: View, Animatable {
         .accessibilityHidden(true)
     }
 
-    private var colors: [Color] {
-        let night = [Theme.nightLift, Theme.night, Theme.nightGlow,
-                     Theme.night, Theme.nightLift, Theme.night,
-                     Theme.night, Theme.night, Theme.nightLift]
-        let green = [Theme.green, Theme.deep, Theme.mint,
-                     Theme.deep, Theme.green, Theme.green,
-                     Theme.deep, Theme.deep, Theme.green]
-        return zip(night, green).map { $0.mix(with: $1, by: awake, in: .perceptual) }
-    }
+    private var colors: [Color] { Palette.ground(awake) }
 }
 
 /// A fine, fixed grain so the gradient reads as a surface, not a screen fill.

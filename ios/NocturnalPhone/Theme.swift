@@ -17,15 +17,15 @@ enum Theme {
     static let screenCorner: CGFloat = 62
     static var sheetCorner: CGFloat { screenCorner - sheetInset }
 
-    // The palette: night, the greens of the app icon, white ink, and red only for errors and destructive things.
-    static let night = Color(red: 0.035, green: 0.047, blue: 0.098)
-    static let nightLift = Color(red: 0.086, green: 0.118, blue: 0.247)
-    static let nightGlow = Color(red: 0.231, green: 0.298, blue: 0.604)
-    static let deep = Color(red: 0.020, green: 0.157, blue: 0.086)
-    static let green = Color(red: 0.063, green: 0.400, blue: 0.231)
-    static let mint = Color(red: 0.251, green: 0.839, blue: 0.608)
-    static let amber = Color(red: 1.0, green: 0.776, blue: 0.282)
-    static let red = Color(red: 1.0, green: 0.42, blue: 0.38)
+    // The palette (shared with the widgets): night, the greens of the app icon, white ink, and red only for errors.
+    static let night = Palette.night
+    static let nightLift = Palette.nightLift
+    static let nightGlow = Palette.nightGlow
+    static let deep = Palette.deep
+    static let green = Palette.green
+    static let mint = Palette.mint
+    static let amber = Palette.amber
+    static let red = Palette.red
 
     // One spring family.
     static let chrome = Animation.spring(response: 0.38, dampingFraction: 0.84)

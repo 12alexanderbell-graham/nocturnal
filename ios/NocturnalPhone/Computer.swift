@@ -49,7 +49,10 @@ final class Computer {
         if CommandLine.arguments.contains("-marketing") { isMarketing = true; startDemo(); return }
         if CommandLine.arguments.contains("-demo") { startDemo(); return }   // UI tests and screenshots
         if CommandLine.arguments.contains("-unpaired") { return }
-        if let p = PairingStore.load() { use(p) }
+        if let p = PairingStore.load() {
+            PairingStore.save(p)   // moves a pairing from before the widgets into the keychain group they share
+            use(p)
+        }
     }
 
     // MARK: Pairing
@@ -68,6 +71,7 @@ final class Computer {
         demo = d
         panel = d.handle("panel", [:]).panel
         panelAt = Date()
+        publish()
     }
 
     static var preview: Computer {
@@ -95,6 +99,8 @@ final class Computer {
         lastTimed = nil
         PairingStore.delete()
         UserDefaults.standard.removeObject(forKey: Self.savedPanel)
+        StatusStore.save(nil)
+        AwakeActivity.end()
     }
 
     private func use(_ p: Pairing) {
@@ -105,6 +111,7 @@ final class Computer {
             panel = saved.panel
             panelAt = saved.at
         }
+        publish()
     }
 
     // MARK: On screen
@@ -149,6 +156,7 @@ final class Computer {
         let reply = await job.value
         pending -= 1
         lastSent = Date()
+        publish()
         return reply
     }
 
@@ -231,7 +239,7 @@ final class Computer {
         case "on":
             guard let until = p.alwaysUntil else { return .always }
             if let t = lastTimed, t.until == nil || t.until == until { return t.stop }
-            if let mins = Self.minutesUntil(until) { return Stop.nearest(minutes: max(1, mins)) }
+            if let mins = Clock.minutesUntil(until) { return Stop.nearest(minutes: max(1, mins)) }
             return .h1
         default: return .busy
         }
@@ -270,17 +278,6 @@ final class Computer {
             if s != .busy { p.keeps = s != .off }
         }
         if s.minutes != nil, lastTimed?.stop == s { lastTimed = (s, panel?.alwaysUntil) }
-    }
-
-    /// "14:30" or "2:30 PM" from the computer's clock, as minutes from now (the next time the clock shows it).
-    static func minutesUntil(_ text: String, now: Date = Date()) -> Double? {
-        guard let m = text.firstMatch(of: /(\d{1,2})[:.](\d{2})\s*([AaPp])?/), var h = Int(m.1), let min = Int(m.2) else { return nil }
-        if let ap = m.3?.lowercased() { h = h % 12 + (ap == "p" ? 12 : 0) }
-        var c = Calendar.current.dateComponents([.year, .month, .day], from: now)
-        c.hour = h; c.minute = min
-        guard var d = Calendar.current.date(from: c) else { return nil }
-        if d < now { d = d.addingTimeInterval(24 * 3600) }
-        return d.timeIntervalSince(now) / 60
     }
 
     // MARK: Undo instead of "are you sure"
@@ -438,6 +435,14 @@ final class Computer {
         if held != nil || asleep { return 0 }
         if notAnswering { return 0.3 }
         return shownStop.level(working: keepsWorking)
+    }
+
+    /// Hands what the screen shows to the widgets and the Live Activity.
+    private func publish() {
+        guard let p = panel, let at = panelAt else { return }
+        let status = Status(panel: p, at: at, asleep: asleep, silent: notAnswering, demo: isDemo)
+        StatusStore.save(status)
+        AwakeActivity.sync(status)
     }
 
     private struct SavedPanel: Codable {

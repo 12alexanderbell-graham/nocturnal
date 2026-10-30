@@ -139,6 +139,14 @@ final class NocturnalPhoneUITests: XCTestCase {
         XCTAssertFalse(app.buttons["exitDemo"].exists)
         sleep(2)
         shot(app, "m1-home")
+        let band = app.descendants(matching: .any)["band"].firstMatch
+        tapStop(band, 3)
+        XCTAssertTrue(wait(app.staticTexts["readout"], contains: "Until"), app.staticTexts["readout"].label)
+        sleep(2)
+        shot(app, "m4-two-hours")
+        tapStop(band, 1)
+        XCTAssertTrue(wait(app.staticTexts["readout"], contains: "When busy"), app.staticTexts["readout"].label)
+        sleep(1)
         app.buttons["settings"].tap()
         XCTAssertTrue(app.staticTexts["Keeps it awake"].waitForExistence(timeout: 3), app.debugDescription)
         sleep(2)
@@ -149,6 +157,27 @@ final class NocturnalPhoneUITests: XCTestCase {
         XCTAssertTrue(wait(app.staticTexts["headline"], contains: "Asleep", timeout: 8), app.debugDescription)
         sleep(2)
         shot(app, "m3-asleep")
+    }
+
+    /// A timed keep-awake starts the Live Activity: it shows in the Dynamic Island once the app is in the background.
+    @MainActor
+    func testLiveActivity() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-marketing"]
+        app.launch()
+        let band = app.descendants(matching: .any)["band"].firstMatch
+        XCTAssertTrue(band.waitForExistence(timeout: 5), app.debugDescription)
+        tapStop(band, 3)
+        XCTAssertTrue(wait(app.staticTexts["readout"], contains: "Until"), app.staticTexts["readout"].label)
+        sleep(1)
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        shot(XCUIApplication(bundleIdentifier: "com.apple.springboard"), "30-live-activity-island")
+        app.activate()
+        XCTAssertTrue(band.waitForExistence(timeout: 5))
+        sleep(1)
+        tapStop(band, 1)
+        XCTAssertTrue(wait(app.staticTexts["readout"], contains: "When busy"), app.staticTexts["readout"].label)
     }
 
     // MARK: Helpers
