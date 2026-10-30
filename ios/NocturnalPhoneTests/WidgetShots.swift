@@ -46,12 +46,10 @@ struct WidgetShots {
             .clipShape(.rect(cornerRadius: 22, style: .continuous))
     }
 
-    /// Lock Screen widgets are white on the wallpaper; a dark wallpaper stands in.
+    /// Lock Screen widgets are white ink on the wallpaper, so they're drawn on nothing: whatever shows them supplies it.
     private func lock(_ v: some View, _ size: CGSize) -> some View {
         v.frame(width: size.width, height: size.height)
             .foregroundStyle(.white)
-            .padding(8)
-            .background(Color(white: 0.12))
             .environment(\.colorScheme, .dark)
     }
 

@@ -180,6 +180,59 @@ final class NocturnalPhoneUITests: XCTestCase {
         XCTAssertTrue(wait(app.staticTexts["readout"], contains: "When busy"), app.staticTexts["readout"].label)
     }
 
+    /// Adds the medium widget to the Home Screen (the demo feeds it) and shoots it, as proof it draws on a real
+    /// Home Screen. Springboard's edit flow, step by step; it prints the screen if a step can't be found.
+    @MainActor
+    func testWidgetOnHomeScreen() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-marketing"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["headline"].waitForExistence(timeout: 5))
+        sleep(1)
+        XCUIDevice.shared.press(.home)
+        let board = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        sleep(1)
+        board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62)).press(forDuration: 1.6)
+        let edit = board.buttons["Edit"]
+        if edit.waitForExistence(timeout: 3) {
+            edit.tap()
+            let add = board.buttons["Add Widget"]
+            XCTAssertTrue(add.waitForExistence(timeout: 3), "no Add Widget in the Edit menu")
+            add.tap()
+        } else {
+            let plus = board.buttons["Add Widget"].exists ? board.buttons["Add Widget"] : board.buttons["add-button"]
+            XCTAssertTrue(plus.waitForExistence(timeout: 3), "no way into the widget gallery")
+            plus.tap()
+        }
+        let search = board.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 4), "no widget search")
+        search.tap()
+        search.typeText("Nocturnal")
+        sleep(2)
+        let result = board.cells.containing(.staticText, identifier: "Nocturnal").firstMatch
+        if result.exists { result.tap() } else { board.staticTexts["Nocturnal"].firstMatch.tap() }
+        sleep(1)
+        board.swipeLeft()   // small → medium
+        sleep(1)
+        // The sheet's button reads "+ Add Widget" with a symbol and its own spacing, so match the end of it.
+        let addButton = board.buttons.matching(NSPredicate(format: "label ENDSWITH 'Widget'")).firstMatch
+        XCTAssertTrue(addButton.waitForExistence(timeout: 3), "no Add Widget button")
+        addButton.tap()
+        sleep(2)
+        if board.buttons["Done"].exists { board.buttons["Done"].tap() }
+        sleep(3)
+        shot(board, "40-home-widget")
+
+        // Its buttons work without opening the app.
+        let always = board.buttons["Always"].firstMatch
+        XCTAssertTrue(always.waitForExistence(timeout: 4), "no Always button on the widget")
+        always.tap()
+        sleep(3)
+        shot(board, "41-home-widget-always")
+        board.buttons["When busy"].firstMatch.tap()
+        sleep(2)
+    }
+
     // MARK: Helpers
 
     @MainActor private func tapStop(_ band: XCUIElement, _ i: Int) {
