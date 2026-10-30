@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// Until this phone has a key. Full screen green, like the computer when it keeps working.
-/// First the welcome: the mark, the name, one line, and two ways on (the demo, or pairing). Then pairing: the mark
-/// moves up, the camera opens right on the page and reads the code Nocturnal shows on the computer; the code can also
-/// be pasted or typed. The two buttons always sit in the same two places at the bottom.
+/// First the welcome: the mark, the name, one line, and Pair a Computer. Then pairing: the mark moves up, the camera
+/// opens right on the page and reads the code Nocturnal shows on the computer; the code can also be pasted or typed.
+/// Typing "demo" opens a pretend computer instead, for App Review and anyone without a computer to hand; nothing on
+/// screen offers it.
 struct PairView: View {
     @Environment(Computer.self) private var computer
     @State private var step = Step.welcome
@@ -41,6 +42,7 @@ struct PairView: View {
                 HeadCircle(symbol: "chevron.left", label: "Back") {
                     typing = false
                     fieldFocused = false
+                    code = ""
                     error = nil
                     step = .welcome
                 }
@@ -122,15 +124,17 @@ struct PairView: View {
             HStack(spacing: Theme.gap) {
                 switch step {
                 case .welcome:
-                    Button { computer.startDemo() } label: {
-                        Text("Try the Demo").font(.headline).frame(maxWidth: .infinity, minHeight: Theme.band).contentShape(.capsule)
+                    Button { step = .pair } label: {
+                        Text("Pair a Computer")
+                            .font(.headline)
+                            .foregroundStyle(Theme.deep)
+                            .frame(maxWidth: .infinity, minHeight: Theme.band)
+                            .contentShape(.capsule)
                     }
                     .buttonStyle(Press(scale: 0.97))
-                    .glassEffect(.clear.interactive(), in: .capsule)
+                    .glassEffect(.clear.tint(.white).interactive(), in: .capsule)
                     .glassEffectID("left", in: ns)
-                    .accessibilityIdentifier("demo")
-                    circle("arrow.right", "Pair a computer", id: "right", prominent: true) { step = .pair }
-                        .accessibilityIdentifier("next")
+                    .accessibilityIdentifier("next")
                 case .pair where typing:
                     TextField("Pairing code", text: $code)
                         .font(.body.monospaced())
@@ -194,6 +198,7 @@ struct PairView: View {
             .resizable()
             .interpolation(.high)
             .frame(width: size, height: size)
+            .clipShape(.rect(cornerRadius: size * 0.225, style: .continuous))
             .matchedGeometryEffect(id: "mark", in: ns)
             .accessibilityHidden(true)
     }
@@ -203,7 +208,14 @@ struct PairView: View {
     private func pairFromField() { pairFrom(code) }
 
     private func pairFrom(_ text: String) {
-        guard let p = Pairing(text: text.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.lowercased() == "demo" {
+            error = nil
+            fieldFocused = false
+            computer.startDemo()
+            return
+        }
+        guard let p = Pairing(text: text) else {
             withAnimation(Theme.chrome) { error = "That isn't a Nocturnal pairing code." }
             return
         }

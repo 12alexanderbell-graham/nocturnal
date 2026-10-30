@@ -37,7 +37,7 @@ Widgets for the Home Screen and Lock Screen show its state and battery, and the 
 
 Pair once: open Nocturnal on your computer, choose Pair a Phone and scan the code. Every message between the phone and the computer is end-to-end encrypted. No account, no tracking, nothing collected.
 
-Nocturnal for Mac, Windows and Linux is free and open source at nocturnal.tools. No computer yet? Tap Try the Demo.
+Nocturnal for Mac, Windows and Linux is free and open source at nocturnal.tools.
 
 ## Keywords (100 max)
 
@@ -57,11 +57,11 @@ First release.
 
 > Nocturnal for iPhone is the companion to Nocturnal, a free, open-source app for Mac, Windows and Linux (https://nocturnal.tools) that keeps a laptop awake with the lid closed while AI coding agents work. The phone pairs with a computer by scanning a QR code that Nocturnal shows on it.
 >
-> To review without a computer: on the first screen tap Try the Demo. A pretend computer inside the app answers every control, and nothing is sent anywhere. Everything works in the demo:
+> To review without a computer: tap Pair a Computer, tap the keyboard button at the bottom right, type demo and tap the arrow. A pretend computer inside the app answers every control, and nothing is sent anywhere. Everything works in the demo:
 > - The band at the bottom: Off, When busy, 1/2/4/8 hours, Always (tap or drag).
 > - The button at the bottom right: Sleep (with a few seconds to undo), then Wake.
 > - The gear at the top right: every setting.
-> - Widgets: add Nocturnal from the widget gallery (small, medium, and the Lock Screen sizes). In the demo they show the demo computer, and the medium widget's buttons change its mode.
+> - Widgets: add Nocturnal from the widget gallery (small, medium, and the Lock Screen sizes). In the demo they show the demo computer, and the medium widget's Always awake button changes its mode.
 > - Live Activity: tap 2 on the band (two hours). The Lock Screen and Dynamic Island count down to the end. Tap When busy to end it.
 >
 > Leave the demo with Exit Demo at the top left. No account or login exists. The camera is used only to scan the pairing code.

@@ -5,7 +5,7 @@ import WidgetKit
 // MARK: Timeline
 
 /// Draws what the app last stored, and asks the computer itself when that's more than a few minutes old (the app
-/// isn't always open). Redraws every five minutes so "2 min ago" stays true, and asks again after fifteen.
+/// isn't always open). Redraws every five minutes so "Last heard" turns up on time, and asks again after fifteen.
 struct StatusProvider: TimelineProvider {
     static let askAfter: TimeInterval = 8 * 60
 
@@ -42,7 +42,7 @@ struct StatusWidget: Widget {
             StatusWidgetView(entry: entry)
         }
         .configurationDisplayName("Nocturnal")
-        .description("Whether your computer keeps working, its battery, and Off, When Busy or Always.")
+        .description("Whether your computer keeps working, with a button to keep it awake.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }

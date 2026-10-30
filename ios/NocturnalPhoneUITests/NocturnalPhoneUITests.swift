@@ -89,7 +89,7 @@ final class NocturnalPhoneUITests: XCTestCase {
 
         // Exit the demo.
         app.buttons["exitDemo"].tap()
-        XCTAssertTrue(app.buttons["demo"].waitForExistence(timeout: 3), app.debugDescription)
+        XCTAssertTrue(app.buttons["next"].waitForExistence(timeout: 3), app.debugDescription)
         sleep(1)
         shot(app, "12-after-demo")
     }
@@ -123,10 +123,16 @@ final class NocturnalPhoneUITests: XCTestCase {
         field.typeText("hello\n")
         XCTAssertTrue(wait(app.staticTexts["pairError"], contains: "isn't a Nocturnal pairing code"), app.debugDescription)
         shot(app, "22-pair-error")
+        // The welcome offers only pairing; typing "demo" is the way in for App Review.
         app.buttons["back"].tap()
-        XCTAssertTrue(app.buttons["demo"].waitForExistence(timeout: 3))
-        app.buttons["demo"].tap()
-        XCTAssertTrue(app.staticTexts["headline"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["next"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["demo"].exists)
+        app.buttons["next"].tap()
+        XCTAssertTrue(app.buttons["type"].waitForExistence(timeout: 3))
+        app.buttons["type"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 3))
+        field.typeText("demo\n")
+        XCTAssertTrue(app.staticTexts["headline"].waitForExistence(timeout: 3), app.debugDescription)
     }
 
     /// Clean screenshots for the website and the App Store: the demo without Exit Demo, reading "Live".
@@ -172,7 +178,22 @@ final class NocturnalPhoneUITests: XCTestCase {
         sleep(1)
         XCUIDevice.shared.press(.home)
         sleep(2)
-        shot(XCUIApplication(bundleIdentifier: "com.apple.springboard"), "30-live-activity-island")
+        let board = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        shot(board, "30-live-activity-island")
+        // Held, the island opens up.
+        board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02)).press(forDuration: 1.2)
+        sleep(1)
+        shot(board, "31-live-activity-expanded")
+        XCUIDevice.shared.press(.home)
+        sleep(1)
+        // The Lock Screen: lock, then wake the screen without unlocking.
+        XCUIDevice.shared.perform(NSSelectorFromString("pressLockButton"))
+        sleep(2)
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        shot(board, "32-live-activity-lock")
+        XCUIDevice.shared.press(.home)
+        sleep(1)
         app.activate()
         XCTAssertTrue(band.waitForExistence(timeout: 5))
         sleep(1)
@@ -224,12 +245,12 @@ final class NocturnalPhoneUITests: XCTestCase {
         shot(board, "40-home-widget")
 
         // Its buttons work without opening the app.
-        let always = board.buttons["Always"].firstMatch
-        XCTAssertTrue(always.waitForExistence(timeout: 4), "no Always button on the widget")
+        let always = board.buttons["Always awake"].firstMatch
+        XCTAssertTrue(always.waitForExistence(timeout: 4), "no Always awake button on the widget")
         always.tap()
         sleep(3)
         shot(board, "41-home-widget-always")
-        board.buttons["When busy"].firstMatch.tap()
+        board.buttons["Always awake"].firstMatch.tap()
         sleep(2)
     }
 

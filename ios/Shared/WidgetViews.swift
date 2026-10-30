@@ -17,22 +17,16 @@ struct StatusEntry: TimelineEntry {
 
 // MARK: Home Screen
 
+/// The state in a word or two and one quiet line under it; the computer's name and battery above. Nothing else.
 struct StatusSmall: View {
     let entry: StatusEntry
 
     var body: some View {
         if let s = entry.status {
             VStack(alignment: .leading, spacing: 0) {
-                Head(status: s, now: entry.date)
-                Spacer(minLength: 4)
-                Text(s.headline)
-                    .font(.system(.title3, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                if !s.line.isEmpty {
-                    Text(s.line).font(.caption.weight(.medium)).lineLimit(2).padding(.top, 1)
-                }
-                Figures(status: s).padding(.top, 4)
+                Top(status: s)
+                Spacer(minLength: 0)
+                Summary(status: s, now: entry.date)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else {
@@ -41,118 +35,108 @@ struct StatusSmall: View {
     }
 }
 
+/// The small face with one button: Always awake (or Wake, while it sleeps).
 struct StatusMedium: View {
     let entry: StatusEntry
 
     var body: some View {
         if let s = entry.status {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Head(status: s, now: entry.date)
-                    Spacer(minLength: 6)
-                    Text(s.headline)
-                        .font(.system(.title3, weight: .bold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    if !s.line.isEmpty {
-                        Text(s.line).font(.footnote.weight(.medium)).lineLimit(2).padding(.top, 2)
-                    }
-                    Figures(status: s).padding(.top, 6)
+            VStack(alignment: .leading, spacing: 0) {
+                Top(status: s)
+                Spacer(minLength: 0)
+                HStack(alignment: .bottom, spacing: 12) {
+                    Summary(status: s, now: entry.date)
+                    Spacer(minLength: 0)
+                    KeepButton(status: s)
+                        .fixedSize()
+                        .layoutPriority(1)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                Controls(status: s)
-                    .frame(width: 118)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else {
             Unpaired(paired: entry.paired)
         }
     }
 }
 
-/// The app mark and how fresh the status is.
-private struct Head: View {
+/// The computer's name, and its battery.
+private struct Top: View {
+    let status: Status
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(status.host).lineLimit(1)
+            Spacer(minLength: 6)
+            if let pct = status.pct {
+                if status.plugged { Image(systemName: "bolt.fill").imageScale(.small) }
+                Text("\(pct)%").monospacedDigit()
+            }
+        }
+        .font(.system(.footnote, design: .rounded, weight: .semibold))
+        .opacity(0.7)
+    }
+}
+
+/// "Keeps working" over "Claude Code is working".
+private struct Summary: View {
     let status: Status
     let now: Date
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image("AppMark")
-                .resizable()
-                .frame(width: 20, height: 20)
-                .clipShape(.rect(cornerRadius: 5, style: .continuous))
-            Text(freshness)
-                .font(.caption.weight(.semibold))
+        VStack(alignment: .leading, spacing: 2) {
+            Text(status.headline)
+                .font(.system(.title3, weight: .bold))
                 .lineLimit(1)
-        }
-    }
-
-    private var freshness: String {
-        if status.demo { return "Demo" }
-        if status.state == .asleep { return "Asleep since " + status.at.formatted(date: .omitted, time: .shortened) }
-        let minutes = Int(now.timeIntervalSince(status.at) / 60)
-        if minutes < 3 { return "Live" }
-        if minutes < 60 { return "\(minutes) min ago" }
-        return status.at.formatted(date: .omitted, time: .shortened)
-    }
-}
-
-/// Battery, watts and hours left, as the app writes them.
-private struct Figures: View {
-    let status: Status
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            if let pct = status.pct { figure("\(pct)", "%") }
-            if let w = status.watts, status.awake { figure(w < 10 ? String(format: "%.1f", w) : "\(Int(w.rounded()))", "W") }
-            if let h = status.hours, !status.plugged { figure("\(Int(h.rounded()))", "h") }
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-    }
-
-    private func figure(_ value: String, _ unit: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 1) {
-            Text(value).font(.system(.title3, design: .rounded, weight: .semibold))
-            Text(unit).font(.system(.footnote, design: .rounded, weight: .semibold))
-        }
-    }
-}
-
-/// Off, When Busy and Always, or Wake while it sleeps. Each is a button that works without opening the app.
-private struct Controls: View {
-    let status: Status
-
-    var body: some View {
-        VStack(spacing: 6) {
-            if status.state == .asleep {
-                Spacer(minLength: 0)
-                Button(intent: WakeComputerIntent()) {
-                    Label("Wake", systemImage: "sun.max.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Palette.night)
-                .background(.white, in: .capsule)
-                Spacer(minLength: 0)
-            } else {
-                ForEach([KeepMode.off, .auto, .always], id: \.self) { mode in
-                    let on = KeepMode(wire: status.mode) == mode
-                    Button(intent: SetKeepModeIntent(mode)) {
-                        Text(title(mode))
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 34)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(on ? Palette.deep : .white)
-                    .background(on ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.16)), in: .capsule)
-                }
+                .minimumScaleFactor(0.75)
+            if !quiet.isEmpty {
+                Text(quiet)
+                    .font(.footnote.weight(.medium))
+                    .lineLimit(2)
+                    .opacity(0.75)
             }
         }
     }
 
-    private func title(_ m: KeepMode) -> String {
-        switch m { case .off: "Off"; case .auto: "When busy"; case .always: "Always" }
+    /// Who is working, or since when it sleeps; when the status has gone stale, when it was last heard instead.
+    private var quiet: String {
+        let time = status.at.formatted(date: .omitted, time: .shortened)
+        if status.state == .asleep { return "Since " + time }
+        if !status.demo, now.timeIntervalSince(status.at) > 20 * 60 { return "Last heard at " + time }
+        return status.line
+    }
+}
+
+/// Always awake, on or off; Wake while it sleeps. Works without opening the app. Off stays in the app and Shortcuts.
+private struct KeepButton: View {
+    let status: Status
+
+    var body: some View {
+        if status.state == .asleep {
+            Button(intent: WakeComputerIntent()) {
+                Label("Wake", systemImage: "sun.max.fill").pill()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Palette.night)
+            .background(.white, in: .capsule)
+        } else {
+            let on = KeepMode(wire: status.mode) == .always
+            Button(intent: SetKeepModeIntent(on ? .auto : .always)) {
+                Label("Always awake", systemImage: on ? "checkmark.circle.fill" : "circle").pill()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(on ? Palette.deep : .white)
+            .background(on ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.16)), in: .capsule)
+            .accessibilityAddTraits(on ? .isSelected : [])
+        }
+    }
+}
+
+private extension View {
+    func pill() -> some View {
+        font(.subheadline.weight(.semibold))
+            .lineLimit(1)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 40)
     }
 }
 
@@ -160,12 +144,15 @@ private struct Unpaired: View {
     let paired: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image("AppMark").resizable().frame(width: 24, height: 24).clipShape(.rect(cornerRadius: 6, style: .continuous))
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Nocturnal")
+                .font(.system(.footnote, design: .rounded, weight: .semibold))
+                .opacity(0.7)
             Spacer(minLength: 0)
-            Text(paired ? "Open Nocturnal" : "Pair in Nocturnal").font(.headline)
-            Text(paired ? "It shows your computer here once it has answered." : "Scan the code on your computer to see it here.")
-                .font(.footnote.weight(.medium))
+            Text(paired ? "Open the app" : "Pair in the app")
+                .font(.system(.title3, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
@@ -235,8 +222,7 @@ struct StatusRectangular: View {
                 Label(s.headline, systemImage: s.symbol)
                     .font(.headline)
                     .widgetAccentable()
-                if !s.figuresLine.isEmpty { Text(s.figuresLine).font(.subheadline) }
-                if !s.line.isEmpty { Text(s.line).font(.subheadline).lineLimit(1) }
+                Text(s.line.isEmpty ? s.figuresLine : s.line).font(.subheadline).lineLimit(1)
             } else {
                 Label("Nocturnal", systemImage: "laptopcomputer").font(.headline)
                 Text(entry.paired ? "Open the app" : "Pair in the app").font(.subheadline)
@@ -274,7 +260,7 @@ extension Status {
 
 // MARK: Live Activity
 
-/// The Live Activity on the Lock Screen.
+/// The Live Activity on the Lock Screen: the computer, when it goes back to normal, the time left and a bar.
 struct AwakeLockScreen: View {
     let host: String
     let state: AwakeAttributes.ContentState
@@ -283,22 +269,23 @@ struct AwakeLockScreen: View {
     var still: Double? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image("AppMark").resizable().frame(width: 24, height: 24).clipShape(.rect(cornerRadius: 6, style: .continuous))
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(host).font(.headline).lineLimit(1)
-                    Text(ended ? "Back to When busy" : "Kept awake until " + state.until.formatted(date: .omitted, time: .shortened))
-                        .font(.footnote.weight(.medium))
-                        .lineLimit(1)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .lastTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(host)
+                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .opacity(0.7)
+                    Text(ended ? "Back to When busy" : "Awake until " + state.until.formatted(date: .omitted, time: .shortened))
+                        .font(.headline)
                 }
+                .lineLimit(1)
                 Spacer(minLength: 8)
                 Countdown(state: state, ended: ended)
-                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                    .font(.system(.title, design: .rounded, weight: .semibold))
             }
             Group {
                 if let still {
-                    Capsule().fill(.white.opacity(0.25)).frame(height: 4)
+                    Capsule().fill(.white.opacity(0.2)).frame(height: 4)
                         .overlay(alignment: .leading) {
                             GeometryReader { g in Capsule().fill(Palette.mint).frame(width: g.size.width * still) }
                         }
@@ -313,7 +300,8 @@ struct AwakeLockScreen: View {
             .tint(Palette.mint)
         }
         .foregroundStyle(.white)
-        .padding(16)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
     }
 }
 
