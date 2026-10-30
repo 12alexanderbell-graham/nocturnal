@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nocturnal Support</title>
+<meta name="description" content="Help with Nocturnal for Mac, Windows, Linux and iPhone.">
+<meta property="og:title" content="Nocturnal Support">
+<meta property="og:description" content="Help with Nocturnal for Mac, Windows, Linux and iPhone.">
+<meta property="og:image" content="https://nocturnal.tools/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://nocturnal.tools/support.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nocturnal">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nocturnal.tools/og.jpg">
+<meta name="theme-color" content="#05281a">
+<link rel="icon" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root { --paper: #f5f5f7; --ink: #1d1d1f; --ink-2: #515154; --line: #d9d9de; --deep: #05281a; --green: #10663b; --mint: #40d69c; --accent: #12723f;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; color-scheme: light; }
+  * { box-sizing: border-box; }
+  html { background: var(--paper); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.5 var(--font); letter-spacing: -0.012em; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); }
+  .wrap { max-width: 760px; margin: 0 auto; padding-inline: 24px; }
+  .ground { position: relative; isolation: isolate; overflow: hidden; overflow: clip; color: #fff; margin: 10px; border-radius: 30px;
+    background: radial-gradient(50% 60% at 85% 10%, rgba(64,214,156,.8), rgba(64,214,156,0) 70%), linear-gradient(40deg, var(--deep), var(--green)); }
+  .flow-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; opacity: 0; transition: opacity .9s linear; pointer-events: none; }
+  .flow-bg.on { opacity: 1; }
+  .top { display: flex; align-items: center; height: 44px; padding-top: 22px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; color: #fff; text-decoration: none; }
+  .brand img { width: 30px; height: 30px; border-radius: 7px; }
+  h1 { font-size: clamp(40px, 7vw, 64px); line-height: 1; letter-spacing: -0.045em; margin: 0; text-wrap: balance; }
+  .lede { font-size: clamp(19px, 2.3vw, 22px); line-height: 1.4; color: rgba(255,255,255,.9); margin: 18px 0 0; max-width: 30em; text-wrap: balance; }
+  .btn { display: inline-block; margin-top: 28px; padding: 13px 26px; border-radius: 980px; background: #fff; color: var(--deep); font-weight: 600; text-decoration: none; }
+  .card { margin: 10px; border-radius: 30px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.04); padding: 40px 0 44px; }
+  h2 { font-size: 21px; letter-spacing: -0.02em; margin: 30px 0 6px; }
+  h2:first-child { margin-top: 0; }
+  .card p { color: var(--ink-2); margin: 0 0 10px; text-wrap: pretty; }
+  footer { padding: 26px 0 max(34px, env(safe-area-inset-bottom)); font-size: 13px; color: var(--ink-2); text-align: center; }
+  footer a { color: inherit; }
+  @media (max-width: 640px) { .ground, .card { margin-inline: 6px; border-radius: 24px; } }
+</style>
+</head>
+<body>
+<header class="ground">
+  <canvas class="flow-bg" data-flow="green" data-k="0.7" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="top"><a class="brand" href="/"><img src="/icon.png" alt="" width="30" height="30">Nocturnal</a></div>
+    <div style="padding: 64px 0 72px">
+      <h1>Support</h1>
+      <p class="lede">Something not working, or a question the site doesn't&nbsp;answer?</p>
+    </div>
+  </div>
+</header>
+<main class="card">
+  <div class="wrap">
+    <h2>Report a problem or ask</h2>
+    <p>Open an issue on <a href="https://github.com/12alexanderbell-graham/nocturnal/issues">GitHub</a>. Say which computer and phone you use and what you expected to what you expected to happen. Every issue gets an&nbsp;answer.<nbsp;happen.</p>
+    <h2>Message me</h2>
+    <p>On X at <a href="https://x.com/12alexanderbell">@12alexanderbell</a>.</p>
+    <h2>Common questions</h2>
+    <p>Pairing, the battery limit, the heat guard and more are answered on the <a href="/#faq-h">home page</a>. What the apps collect (nothing) is on the <a href="/privacy">privacy&nbsp;page</a>.</p>
+  </div>
+</main>
+<footer><a href="/">Nocturnal</a> · MIT · <a href="https://x.com/12alexanderbell">@12alexanderbell</a></footer>
+<script src="/fx.js?v=5" defer></script>
+<!-- Page views only: Cloudflare Web Analytics, no cookies. Not on the phone page. -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "e9fed4c288994440ae4cbd34ac664887"}'></script>
+</body>
+</html>
