@@ -13,6 +13,8 @@ enum Theme {
     static let head: CGFloat = 44               // head circles
     static let band: CGFloat = 56               // the keep-awake band and the main circle
     static let gap: CGFloat = 8
+    /// The widest the content gets: on a wider screen (iPhone Duo open or turned) it's a column in the middle.
+    static let column: CGFloat = 500
     static let sheetInset: CGFloat = 8
     static let screenCorner: CGFloat = 62
     static var sheetCorner: CGFloat { screenCorner - sheetInset }

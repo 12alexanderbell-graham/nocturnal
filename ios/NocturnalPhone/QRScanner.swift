@@ -48,7 +48,7 @@ private struct CameraView: UIViewRepresentable {
         view.previewLayer.videoGravity = .resizeAspectFill
         view.previewLayer.session = context.coordinator.session
         AVCaptureDevice.requestAccess(for: .video) { ok in
-            Task { @MainActor in ok ? context.coordinator.start() : denied() }
+            Task { @MainActor in ok ? context.coordinator.start(preview: view.previewLayer) : denied() }
         }
         return view
     }
@@ -69,13 +69,24 @@ private struct CameraView: UIViewRepresentable {
         private let cameraQueue = DispatchQueue(label: "nocturnal.camera")
         private let found: (String) -> Void
         private var done = false
+        /// Keeps the picture upright however the phone is held or (on iPhone Duo) folded, opened or turned.
+        private var rotation: AVCaptureDevice.RotationCoordinator?
+        private var rotationWatch: NSKeyValueObservation?
 
         init(found: @escaping (String) -> Void) { self.found = found }
 
-        func start() {
+        func start(preview: AVCaptureVideoPreviewLayer) {
             guard session.inputs.isEmpty, let camera = AVCaptureDevice.default(for: .video),
                   let input = try? AVCaptureDeviceInput(device: camera), session.canAddInput(input) else { return }
             session.addInput(input)
+            let r = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: preview)
+            rotation = r
+            rotationWatch = r.observe(\.videoRotationAngleForHorizonLevelPreview, options: [.initial, .new]) { [weak preview] r, _ in
+                let angle = r.videoRotationAngleForHorizonLevelPreview
+                DispatchQueue.main.async {
+                    if let c = preview?.connection, c.isVideoRotationAngleSupported(angle) { c.videoRotationAngle = angle }
+                }
+            }
             let output = AVCaptureMetadataOutput()
             guard session.canAddOutput(output) else { return }
             session.addOutput(output)
@@ -86,6 +97,7 @@ private struct CameraView: UIViewRepresentable {
         }
 
         func stop() {
+            rotationWatch = nil
             let s = session
             cameraQueue.async { s.stopRunning() }
         }

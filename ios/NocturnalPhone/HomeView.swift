@@ -17,17 +17,24 @@ struct HomeView: View {
             // Everything below is laid out in whole-screen points, safe areas included, so the sheet, the gear and
             // the head are measured from the same origin.
             let size = CGSize(width: geo.size.width + safe.leading + safe.trailing, height: geo.size.height + safe.top + safe.bottom)
+            // On a wide screen (iPhone Duo open, or turned) everything stands in a phone-wide column in the middle;
+            // the ground still fills the screen.
+            let column = min(size.width, Theme.column)
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 GlassEffectContainer(spacing: 0) {
                     ZStack(alignment: .topLeading) {
-                        content(context.date, size: size, safe: safe)
+                        content(context.date, size: CGSize(width: column, height: size.height), safe: safe)
+                            .frame(width: column, height: size.height)
                             .frame(width: size.width, height: size.height)
                         SettingsGlass(state: $sheet,
-                                      screen: CGSize(width: size.width, height: geo.frame(in: .global).maxY + safe.bottom),
+                                      screen: CGSize(width: column, height: geo.frame(in: .global).maxY + safe.bottom),
                                       gear: gearFrame)
+                            .frame(width: column, height: size.height)
+                            .frame(width: size.width, height: size.height)
                         head
                             .padding(.top, safe.top + 2)
                             .padding(.horizontal, Theme.side)
+                            .frame(width: column, alignment: .top)
                             .frame(width: size.width, alignment: .top)
                     }
                     .frame(width: size.width, height: size.height, alignment: .topLeading)

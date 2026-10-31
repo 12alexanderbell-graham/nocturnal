@@ -103,18 +103,19 @@ private struct SheetBody: View, Animatable {
         set { t = newValue.first; drag = newValue.second }
     }
 
-    // All three in this view's own coordinates (window coordinates minus where this view starts).
+    // All three in this view's own coordinates (window coordinates minus where this view starts). Across, the sheet
+    // spans this view (the screen, or the middle column on a wide screen), wherever it starts.
     private var gearRect: CGRect {
         gear.offsetBy(dx: -origin.x, dy: -origin.y)
     }
     private var halfRect: CGRect {
         let h = screen.height * 0.5
-        return CGRect(x: Theme.sheetInset, y: screen.height - Theme.sheetInset - h, width: screen.width - Theme.sheetInset * 2, height: h)
+        return CGRect(x: origin.x + Theme.sheetInset, y: screen.height - Theme.sheetInset - h, width: screen.width - Theme.sheetInset * 2, height: h)
             .offsetBy(dx: -origin.x, dy: -origin.y)
     }
     private var fullRect: CGRect {
         let top = gear.maxY + 10
-        return CGRect(x: Theme.sheetInset, y: top, width: screen.width - Theme.sheetInset * 2, height: screen.height - Theme.sheetInset - top)
+        return CGRect(x: origin.x + Theme.sheetInset, y: top, width: screen.width - Theme.sheetInset * 2, height: screen.height - Theme.sheetInset - top)
             .offsetBy(dx: -origin.x, dy: -origin.y)
     }
 

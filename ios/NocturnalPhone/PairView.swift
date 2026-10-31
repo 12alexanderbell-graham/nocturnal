@@ -27,6 +27,8 @@ struct PairView: View {
                     .padding(.bottom, Theme.bottom - 14)
             }
             .padding(.horizontal, Theme.side)
+            .frame(maxWidth: Theme.column)
+            .frame(maxWidth: .infinity)
         }
         .foregroundStyle(.white)
         .animation(Theme.grow, value: step)
