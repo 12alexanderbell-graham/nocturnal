@@ -57,8 +57,9 @@ impl<P: Platform> Engine<P> {
         }
     }
 
-    /// "Claude Code went idle": an agent that was busy for at least a minute has been quiet for 2 minutes.
-    /// Nocturnal can't tell success from a crash or a question waiting for an answer, so it never says "finished".
+    /// "Claude Code finished": an agent that was busy for at least a minute has stopped. One that reports its own
+    /// state is believed after 2 quiet minutes; one judged only by CPU after 5, and then the alert says only that
+    /// it has been quiet, because a model thinking in silence uses no CPU either.
     pub(super) fn detect_finished(&mut self, now: u64) {
         let mut current: HashMap<String, (u64, String)> = HashMap::new();
         let present: HashSet<String> = self
@@ -89,10 +90,14 @@ impl<P: Platform> Engine<P> {
             }
         }
         self.working_since = current;
+        let reported = |id: &str| self.watcher.sessions.iter().any(|s| s.kind.id == id && s.state.is_some());
         let due: Vec<String> = self
             .idle_pending
             .iter()
-            .filter(|(_, p)| now.saturating_sub(p.2) >= 120)
+            .filter(|(id, p)| {
+                let wait = if present.contains(*id) && !reported(id) { 300 } else { 120 };
+                now.saturating_sub(p.2) >= wait
+            })
             .map(|(id, _)| id.clone())
             .collect();
         for id in due {
@@ -100,7 +105,8 @@ impl<P: Platform> Engine<P> {
                 continue;
             };
             let minutes = idle_at.saturating_sub(since) as f64 / 60.0;
-            if minutes < 1.0 || !self.cfg.notify_done {
+            // The Claude app's work mostly runs in the cloud: its CPU here says nothing about whether it's done.
+            if minutes < 1.0 || !self.cfg.notify_done || id == "claude-app" {
                 continue;
             }
             let state = self
@@ -112,7 +118,9 @@ impl<P: Platform> Engine<P> {
             let title = if present.contains(&id) {
                 match state {
                     Some(crate::events::AgentState::Finished) => format!("{name} finished"),
-                    _ => format!("{name} went idle"),
+                    Some(crate::events::AgentState::Waiting) => format!("{name} is waiting for you"),
+                    Some(_) => format!("{name} stopped"),
+                    None => format!("{name} has been quiet for 5 min"),
                 }
             } else {
                 format!("{name} closed")

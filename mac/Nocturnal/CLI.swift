@@ -29,9 +29,10 @@ enum CLI {
         case "sleep": return show(send("sleep_now", [:]))
         case "watchdog": print(Watchdog.run(force: false)); return 0
         case "event":
-            // From an agent's lifecycle hook: the hook's JSON on stdin. Quiet and always successful, so it can
-            // never block or clutter the agent.
-            let input = FileHandle.standardInput.readData(ofLength: 1 << 20)
+            // From an agent's lifecycle hook: the hook's JSON on stdin (Claude Code), or as the last argument
+            // (Codex's `notify`, which leaves stdin open, so it must not be read then). Quiet and always successful,
+            // so it can never block or clutter the agent.
+            let input = rest.count > 1 ? Data(rest[rest.count - 1].utf8) : FileHandle.standardInput.readData(ofLength: 1 << 20)
             AgentEvents.record(agent: rest.first ?? "", input: input)
             return 0
         case "doctor": return doctor()

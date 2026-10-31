@@ -1,7 +1,7 @@
 import AppKit
 import UserNotifications
 
-/// "Claude Code went idle" alerts: a Mac notification, an optional chime, and an optional phone push through
+/// "Claude Code finished" alerts: a Mac notification, an optional chime, and an optional phone push through
 /// ntfy (free app, no account: the person subscribes to a topic name and Nocturnal posts to it).
 /// Asks for notification permission the first time one is due, not at launch.
 @MainActor
@@ -33,8 +33,8 @@ final class Notifier {
         }
     }
 
-    /// Activity stopped. With hooks, Claude Code says it finished its turn; without them Nocturnal only sees activity
-    /// stop and can't tell a finished task from a crash or a question, so it says "went idle" (or "closed").
+    /// Activity stopped. With hooks, the agent says it finished its turn; without them Nocturnal only sees activity
+    /// stop for 5 minutes and can't tell a finished task from a model thinking in silence, so it says only that.
     private func finished(_ name: String, minutes: Double, gone: Bool, state: AgentState?) {
         let c = engine.config
         if c.doneChime { Self.play(c.chimeSound) }
@@ -43,10 +43,18 @@ final class Notifier {
         if engine.lidClosed { body += " with the lid closed" }
         if let b = engine.battery { body += " · battery \(b.percent)%" }
         if c.mode == .auto && c.sleepWhenDone && engine.lidClosed && engine.holds.isEmpty {
-            // This alert comes 2 minutes into the quiet time, so that much of it has already passed.
-            body += ". Sleeps in \(max(1, c.quietMinutes - 2)) min if nothing else starts."
+            // This alert comes 2 minutes into the quiet time (5 when guessed), so that much of it has passed.
+            let left = state == nil ? max(c.quietMinutes, Int(Engine.guessedQuiet / 60)) - 5 : c.quietMinutes - 2
+            body += ". Sleeps in \(max(1, left)) min if nothing else starts."
         }
-        let title = gone ? "\(name) closed" : (state == .finished ? "\(name) finished" : (state == .waiting ? "\(name) is waiting for you" : "\(name) went idle"))
+        let title: String
+        switch (gone, state) {
+        case (true, _): title = "\(name) closed"
+        case (_, .finished?): title = "\(name) finished"
+        case (_, .waiting?): title = "\(name) is waiting for you"
+        case (_, nil): title = "\(name) has been quiet for 5 min"
+        default: title = "\(name) stopped"
+        }
 
         if !c.ntfyTopic.isEmpty { Self.push(topic: c.ntfyTopic, title: title, body: body) }
         guard c.notifyDone else { return }

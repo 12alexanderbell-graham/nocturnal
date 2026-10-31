@@ -8,6 +8,10 @@ import Foundation
 ///
 /// Each hook runs `nocturnal event claude-code`, which writes one small file per session into `agent-events/`
 /// and returns at once. Nocturnal reads them on its next sample; a session whose process has gone is dropped.
+///
+/// Codex only reports the end of a turn (its `notify` program, `nocturnal event codex <json>`). Nocturnal marks the
+/// start itself: activity after a finished turn means a new one began, and it stays "working" until Codex says the
+/// turn is over, however long the model thinks in silence. All of Codex's turns share one file ("main").
 enum AgentState: String, Codable {
     case idle        // open, nothing asked yet
     case working     // a prompt was sent and the turn hasn't ended
@@ -38,18 +42,19 @@ enum AgentEvents {
     static func record(agent: String, input: Data, now: Date = Date()) {
         guard agent.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" }), agent.count <= 32,
               let obj = (try? JSONSerialization.jsonObject(with: input)) as? [String: Any] else { return }
-        let session = String((obj["session_id"] as? String ?? "unknown")
+        let session = agent == "codex" ? "main" : String((obj["session_id"] as? String ?? "unknown")
             .filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }.prefix(64))
         guard !session.isEmpty else { return }
         let url = dir.appendingPathComponent("\(agent)-\(session).json")
         let previous = (try? Data(contentsOf: url)).flatMap { try? JSONDecoder().decode(AgentEvent.self, from: $0) }
-        let event = obj["hook_event_name"] as? String ?? ""
+        let event = obj["hook_event_name"] as? String ?? obj["type"] as? String ?? ""
         let t = now.timeIntervalSince1970
         var state: AgentState
         var at = t
         switch event {
         case "UserPromptSubmit": state = .working
-        case "Stop": state = .finished
+        case "Stop", "agent-turn-complete": state = .finished
+        case "approval-requested": state = .waiting
         case "SessionStart":
             // An automatic compaction restarts the session in the middle of a turn: not a change of state.
             if (obj["source"] as? String) == "compact" { return }
@@ -80,6 +85,16 @@ enum AgentEvents {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         if let d = try? JSONEncoder().encode(e) { try? d.write(to: url, options: .atomic) }
         post()
+    }
+
+    /// The app's own note that an agent is working (Codex starts a turn without telling anyone). Kept on the
+    /// agent's pid so it's dropped with the session.
+    static func noteWorking(agent: String, session: String, at: Date, pid: pid_t) {
+        let url = dir.appendingPathComponent("\(agent)-\(session).json")
+        let e = AgentEvent(agent: agent, session: session, state: .working, at: at.timeIntervalSince1970,
+                           pid: pid, pidStart: Procs.startTime(pid))
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        if let d = try? JSONEncoder().encode(e) { try? d.write(to: url, options: .atomic) }
     }
 
     private static func post() {

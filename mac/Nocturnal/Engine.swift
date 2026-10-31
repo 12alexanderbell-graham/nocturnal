@@ -523,11 +523,10 @@ final class Engine {
     // MARK: Decision
 
     var activeAgent: AgentSession? {
-        let window = TimeInterval(config.quietMinutes * 60)
-        return sessions.first { s in
+        sessions.first { s in
             if s.kind == AgentKind.claudeApp && !config.countClaudeApp { return false }
             if config.trackOnly.contains(s.kind.id) { return false }
-            return config.sleepWhenDone ? Date().timeIntervalSince(s.lastActive) < window : true
+            return config.sleepWhenDone ? Date().timeIntervalSince(s.lastActive) < quietWindow(s) : true
         }
     }
 
@@ -541,8 +540,8 @@ final class Engine {
             if a.state == .waiting && isWorking(a) { return "\(name) is waiting for you" }
             if isWorking(a) { return a.toolRunning && a.watts < a.kind.idleWatts ? "\(name) is running a command" : Self.describe(a) }
             if !config.sleepWhenDone { return "\(name) is open" }
-            let left = window - Date().timeIntervalSince(a.lastActive)
-            let what = a.state == .finished ? "finished" : (a.state == .waiting ? "is still waiting" : "went idle")
+            let left = quietWindow(a) - Date().timeIntervalSince(a.lastActive)
+            let what = a.state == .finished ? "finished" : (a.state == .waiting ? "is still waiting" : "is quiet")
             return "\(name) \(what) · sleeps in \(PanelFormat.minutes(max(60, left)))"
         }
         guard let last = config.sleepWhenDone ? lastWork : lastSeen else { return nil }

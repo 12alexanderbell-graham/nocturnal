@@ -95,14 +95,16 @@ fn working_agent_holds_and_finished_agent_sleeps_a_closed_laptop() {
         e.receipt.is_some(),
         "closing while holding starts a receipt"
     );
-    // Agent quiet for longer than the 5-minute window.
-    e.tick(now + 6 * 60 + 2, None);
+    // Agent quiet for longer than its window: 10 minutes, as it's judged only by CPU (no hooks).
+    e.tick(now + 9 * 60, None);
+    assert!(e.holding, "a CPU-judged agent gets 10 quiet minutes, not 5: it may be thinking in silence");
+    e.tick(now + 11 * 60 + 2, None);
     assert!(!e.holding && !e.platform.holding);
     assert_eq!(
         e.platform.slept, 1,
         "a closed laptop is put to sleep exactly once"
     );
-    e.tick(now + 6 * 60 + 4, None);
+    e.tick(now + 11 * 60 + 4, None);
     assert_eq!(e.platform.slept, 1, "no repeat sleeps on later ticks");
 }
 

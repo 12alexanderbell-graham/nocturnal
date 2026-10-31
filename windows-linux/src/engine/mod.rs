@@ -604,6 +604,13 @@ impl<P: Platform> Engine<P> {
         }
     }
 
+    /// How long this agent has to be quiet before it counts as done: longer when only its CPU can be judged,
+    /// because a model thinking in silence uses none.
+    fn agent_window(&self, s: &Session) -> u64 {
+        let base = self.cfg.quiet_minutes as u64 * 60;
+        if s.state.is_none() { base.max(GUESSED_QUIET) } else { base }
+    }
+
     /// Why an agent is keeping it awake right now, with the countdown when it's winding down.
     pub fn work_reason(&self, now: u64) -> Option<String> {
         let window = self.quiet_window();
@@ -627,11 +634,11 @@ impl<P: Platform> Engine<P> {
             if !self.cfg.sleep_when_done {
                 return Some(format!("{name} is open"));
             }
-            let left = window.saturating_sub(now.saturating_sub(a.last_active));
+            let left = self.agent_window(a).saturating_sub(now.saturating_sub(a.last_active));
             let what = match a.state {
                 Some(crate::events::AgentState::Finished) => "finished",
                 Some(crate::events::AgentState::Waiting) => "is still waiting",
-                _ => "went idle",
+                _ => "is quiet",
             };
             return Some(format!(
                 "{name} {what} · sleeps in {}",
@@ -672,11 +679,10 @@ impl<P: Platform> Engine<P> {
     }
 
     pub fn active_agent(&self, now: u64) -> Option<&Session> {
-        let window = self.cfg.quiet_minutes as u64 * 60;
         self.watcher.sessions.iter().find(|s| {
             self.counts(s)
                 && (!self.cfg.sleep_when_done
-                    || s.last_active > 0 && now.saturating_sub(s.last_active) < window)
+                    || s.last_active > 0 && now.saturating_sub(s.last_active) < self.agent_window(s))
         })
     }
 
@@ -1056,6 +1062,8 @@ impl<P: Platform> Engine<P> {
 
 /// How long "serious" heat with the lid shut is tolerated before the laptop is put to sleep.
 pub const HOT_GRACE_SECS: u64 = 300;
+/// How long an agent judged only by its CPU has to be quiet before it counts as done (seconds).
+pub const GUESSED_QUIET: u64 = 10 * 60;
 
 /// Time constant of the lid-shut draw estimate, in seconds.
 const CLOSED_DRAW_TAU: f64 = 180.0;

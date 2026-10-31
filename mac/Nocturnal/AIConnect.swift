@@ -78,9 +78,48 @@ enum AIConnect {
 
     nonisolated static var codexConfig: URL { AutoApprove.codexURL }
     nonisolated static var codexInstalled: Bool { FileManager.default.fileExists(atPath: codexConfig.deletingLastPathComponent().path) }
+    /// Connected: Nocturnal's MCP entry is there, and so is its `notify` (unless Codex already runs another one).
     nonisolated static var codexConnected: Bool {
         guard let text = try? String(contentsOf: codexConfig, encoding: .utf8) else { return false }
-        return codexNocturnalRange(text.components(separatedBy: "\n")) != nil || codexInlineNocturnal(text)
+        let lines = text.components(separatedBy: "\n")
+        return (codexNocturnalRange(lines) != nil || codexInlineNocturnal(text)) && codexNotifyLine(lines) != nil
+    }
+
+    /// Codex's `notify` program, which it runs at the end of every turn with the turn's JSON as the last argument:
+    /// it tells Nocturnal the turn is over. Through /bin/sh so it does nothing, quietly, once Nocturnal is gone.
+    nonisolated static func codexNotify(server: (command: String, args: [String])) -> [String] {
+        let q = "'" + server.command.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        let cli = server.args.first == "cli" ? " cli" : ""
+        return ["/bin/sh", "-c", "[ -x \(q) ] && \(q)\(cli) event codex \"$1\"; exit 0", "nocturnal"]
+    }
+
+    /// The top-level `notify = …` line (before the first table), and whether it's Nocturnal's.
+    nonisolated static func codexNotifyLine(_ lines: [String]) -> (index: Int, ours: Bool)? {
+        for (i, l) in lines.enumerated() {
+            if codexHeader(l) != nil { return nil }
+            let t = l.trimmingCharacters(in: .whitespaces)
+            guard !t.hasPrefix("#"), let eq = t.firstIndex(of: "="),
+                  t[..<eq].trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\"", with: "") == "notify" else { continue }
+            return (i, t.contains("event codex") && t.lowercased().contains("nocturnal"))
+        }
+        return nil
+    }
+
+    /// The config text with Nocturnal's `notify` added or updated. Another program's `notify` is left alone (Codex
+    /// takes only one), and `added` says so.
+    nonisolated static func codexWithNotify(_ text: String, notify: [String]) -> (text: String, added: Bool) {
+        func q(_ s: String) -> String { "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
+        let line = "notify = [\(notify.map(q).joined(separator: ", "))]"
+        var lines = text.isEmpty ? [] : text.components(separatedBy: "\n")
+        if let (i, ours) = codexNotifyLine(lines) {
+            guard ours else { return (text, false) }
+            lines[i] = line
+            return (lines.joined(separator: "\n"), true)
+        }
+        // Top-level keys have to come before the first table.
+        let first = lines.firstIndex { codexHeader($0) != nil } ?? lines.count
+        lines.insert(contentsOf: first < lines.count ? [line, ""] : [line], at: first)
+        return (lines.joined(separator: "\n"), true)
     }
 
     /// A table header line's name (`[mcp_servers.nocturnal]`, `[ mcp_servers . "nocturnal" ]` → `mcp_servers.nocturnal`), or nil.
@@ -152,12 +191,13 @@ enum AIConnect {
             existing = text
         }
         if codexInlineNocturnal(existing) { return "Codex already has an nocturnal entry written by hand; left it as it is." }
-        let updated = codexUpdated(existing, command: cmd, args: args)
+        let (updated, notified) = codexWithNotify(codexUpdated(existing, command: cmd, args: args), notify: codexNotify(server: server))
         do {
             try fm.createDirectory(at: codexConfig.deletingLastPathComponent(), withIntermediateDirectories: true)
             if !existing.isEmpty { try existing.write(to: codexConfig.appendingPathExtension("nocturnal-backup"), atomically: true, encoding: .utf8) }
             try updated.write(to: codexConfig, atomically: true, encoding: .utf8)
-            return "Added to Codex (~/.codex/config.toml). New sessions can use Nocturnal."
+            return "Added to Codex (~/.codex/config.toml). New sessions can use Nocturnal"
+                + (notified ? ", and tell it when a turn ends." : ". Codex already runs its own notify program, so Nocturnal judges when Codex is done by its power use.")
         } catch {
             return "Couldn't write Codex's config: \(error.localizedDescription)"
         }
@@ -224,9 +264,15 @@ enum AIConnect {
         if claudeAppConnected { _ = editJSON(claudeAppConfig, done: "", dropNocturnal) }
         if let text = try? String(contentsOf: codexConfig, encoding: .utf8) {
             var lines = text.components(separatedBy: "\n")
-            if let r = codexNocturnalRange(lines) {
+            let r = codexNocturnalRange(lines)
+            let notify = codexNotifyLine(lines).flatMap { $0.ours ? $0.index : nil }
+            if r != nil || notify != nil {
                 try? text.write(to: codexConfig.appendingPathExtension("nocturnal-backup"), atomically: true, encoding: .utf8)
-                lines.removeSubrange(r)
+                if let r { lines.removeSubrange(r) }
+                if let notify {   // before the table in the file, so its index is unchanged by the removal above
+                    lines.remove(at: notify)
+                    if notify < lines.count, lines[notify].trimmingCharacters(in: .whitespaces).isEmpty { lines.remove(at: notify) }
+                }
                 try? lines.joined(separator: "\n").write(to: codexConfig, atomically: true, encoding: .utf8)
             }
         }

@@ -20,6 +20,13 @@ extension Engine {
 
     func applyAgentEvents(_ list: [AgentSession], now: Date) -> [AgentSession] {
         agentEvents = previewOnly ? [] : AgentEvents.load(now: now)
+        // Codex says when a turn ends but not when one starts: activity well after its last "finished" is a new turn.
+        if let done = agentEvents.first(where: { $0.agent == "codex" && $0.state == .finished }),
+           let s = list.first(where: { $0.kind.id == "codex" }),
+           s.lastActive.timeIntervalSince1970 > done.at + Self.codexNewTurnAfter {
+            AgentEvents.noteWorking(agent: "codex", session: done.session, at: s.lastActive, pid: s.pid)
+            agentEvents = AgentEvents.load(now: now)
+        }
         guard !agentEvents.isEmpty else { return list }
         var out = list
         for i in out.indices where !out[i].kind.isRequest {
@@ -45,6 +52,17 @@ extension Engine {
         return out
     }
 
+    /// Seconds of activity after Codex's last finished turn that count as a new turn (not the tail of the old one).
+    static let codexNewTurnAfter: TimeInterval = 30
+
+    /// How long an agent has to be quiet before it counts as done. An agent that reports its own state is believed
+    /// at once; one Nocturnal can only judge by power gets longer, because a model thinking in silence uses none.
+    func quietWindow(_ s: AgentSession) -> TimeInterval {
+        let base = TimeInterval(config.quietMinutes * 60)
+        return s.state == nil && s.kind.isAI ? max(base, Self.guessedQuiet) : base
+    }
+    static let guessedQuiet: TimeInterval = 10 * 60
+
     func counts(_ s: AgentSession) -> Bool {
         !s.kind.isRequest && !config.trackOnly.contains(s.kind.id) && !(s.kind == AgentKind.claudeApp && !config.countClaudeApp)
     }
@@ -60,11 +78,15 @@ extension Engine {
         }
         for (id, since) in workingSince where working[id] == nil { idlePending[id] = (since, now) }
         workingSince = working
-        for (id, p) in idlePending where now.timeIntervalSince(p.quietAt) >= 120 {
+        for (id, p) in idlePending {
+            let present = sessions.first { $0.kind.id == id }
+            // Its own "finished" or "waiting" is announced after 2 quiet minutes; a guess from power after 5.
+            let wait: TimeInterval = present?.state == nil && present != nil ? 300 : 120
+            guard now.timeIntervalSince(p.quietAt) >= wait else { continue }
             idlePending[id] = nil
             let minutes = p.quietAt.timeIntervalSince(p.since) / 60
-            guard minutes >= 1, !previewOnly else { continue }
-            let present = sessions.first { $0.kind.id == id }
+            // The Claude app's work mostly runs in the cloud, so its power here says nothing about whether it's done.
+            guard minutes >= 1, !previewOnly, id != AgentKind.claudeApp.id else { continue }
             onFinished?(present?.kind.name ?? finishedNames[id] ?? "Agent", minutes, present == nil, present?.state)
         }
         for s in sessions { finishedNames[s.kind.id] = s.kind.name }
