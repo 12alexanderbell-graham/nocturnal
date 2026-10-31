@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Until this phone has a key. Full screen green, like the computer when it keeps working.
-/// First the welcome: the mark, the name, one line, and Pair a Computer. Then pairing: the name moves to the bar, the
-/// camera opens right on the page and reads the code Nocturnal shows on the computer; the code can also be pasted or typed.
+/// First the welcome: the mark, the name, one line, and Pair a Computer. Then pairing: the camera opens right on the
+/// page and reads the code Nocturnal shows on the computer; the code can also be pasted or typed.
 /// Typing "demo" opens a pretend computer instead, for App Review and anyone without a computer to hand; nothing on
 /// screen offers it.
 struct PairView: View {
@@ -18,25 +18,15 @@ struct PairView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let wide = geo.size.width >= Theme.wide
-            VStack(spacing: 0) {
-                switch step {
-                case .welcome: welcome
-                case .pair where wide: pairWide(geo.size)
-                case .pair: pair(geo.size)
-                }
-                if step == .welcome || !wide {
-                    bottom
-                        .padding(.bottom, Theme.bottom - 14)
-                }
+            if geo.size.width >= Theme.wide {
+                ScreenCentred { size in layout(size, wide: true) }
+            } else {
+                layout(geo.size, wide: false)
             }
-            .padding(.horizontal, Theme.side)
-            .frame(maxWidth: wide && step == .pair ? .infinity : Theme.column)
-            .frame(maxWidth: .infinity)
         }
         .foregroundStyle(.white)
-        // Back and the name are system toolbar items, so iOS places them on every screen (the top bar on an iPhone,
-        // the side strip by the clock on iPhone Duo's outer screen).
+        // Back is a system toolbar item, so iOS places it on every screen (the top bar on an iPhone, the side strip by
+        // the clock on iPhone Duo's outer screen).
         .toolbar {
             if step == .pair {
                 ToolbarItem(placement: .topBarLeading) {
@@ -49,22 +39,28 @@ struct PairView: View {
                     }
                     .accessibilityIdentifier("back")
                 }
-                ToolbarItem(placement: .principal) {
-                    HStack(spacing: 8) {
-                        Image("AppMark")
-                            .resizable()
-                            .interpolation(.high)
-                            .frame(width: 26, height: 26)
-                            .clipShape(.rect(cornerRadius: 26 * 0.225, style: .continuous))
-                            .accessibilityHidden(true)
-                        Text("Nocturnal").font(.headline)
-                    }
-                }
             }
         }
         .animation(Theme.grow, value: step)
         .animation(Theme.chrome, value: typing)
         .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
+    }
+
+    private func layout(_ size: CGSize, wide: Bool) -> some View {
+        VStack(spacing: 0) {
+            switch step {
+            case .welcome: welcome
+            case .pair where wide: pairWide(size)
+            case .pair: pair(size)
+            }
+            if step == .welcome || !wide {
+                bottom
+                    .padding(.bottom, Theme.bottom - 14)
+            }
+        }
+        .padding(.horizontal, Theme.side)
+        .frame(maxWidth: wide && step == .pair ? .infinity : Theme.column)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Welcome

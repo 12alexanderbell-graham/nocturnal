@@ -77,3 +77,25 @@ struct Press: ButtonStyle {
             .animation(configuration.isPressed ? .easeOut(duration: 0.09) : .easeOut(duration: 0.26), value: configuration.isPressed)
     }
 }
+
+/// On a wide screen, centres its content on the whole screen rather than on the safe area: the same inset on both
+/// sides (the larger of the two), so a strip on one side (iPhone Duo's clock and buttons) doesn't pull everything off
+/// centre. Top and bottom match too, unless the keyboard is up.
+struct ScreenCentred<Content: View>: View {
+    @ViewBuilder let content: (CGSize) -> Content
+
+    var body: some View {
+        GeometryReader { geo in
+            let s = geo.safeAreaInsets
+            let screen = CGSize(width: geo.size.width + s.leading + s.trailing, height: geo.size.height + s.top + s.bottom)
+            let side = max(s.leading, s.trailing)
+            let keyboard = s.bottom > 80
+            let top = keyboard ? s.top : max(s.top, s.bottom)
+            let bottom = keyboard ? s.bottom : top
+            let size = CGSize(width: max(0, screen.width - side * 2), height: max(0, screen.height - top - bottom))
+            content(size)
+                .frame(width: size.width, height: size.height)
+                .position(x: screen.width / 2 - s.leading, y: top + size.height / 2 - s.top)
+        }
+    }
+}

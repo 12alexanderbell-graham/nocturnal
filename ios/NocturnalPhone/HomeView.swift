@@ -15,14 +15,12 @@ struct HomeView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             GeometryReader { geo in
-                Group {
-                    if geo.size.width >= Theme.wide {
-                        wide(context.date, geo.size)
-                    } else {
-                        narrow(context.date)
-                    }
+                if geo.size.width >= Theme.wide {
+                    ScreenCentred { size in wide(context.date, size) }
+                } else {
+                    narrow(context.date)
+                        .frame(width: geo.size.width, height: geo.size.height)
                 }
-                .frame(width: geo.size.width, height: geo.size.height)
             }
             .onChange(of: context.date) { _, now in if phase == .active { computer.tick(now) } }
         }
@@ -93,7 +91,6 @@ struct HomeView: View {
             Color.clear.frame(height: 52)
         }
         .padding(.horizontal, Theme.side)
-        .padding(.bottom, Theme.bottom)
     }
 
     private func hero(_ now: Date) -> some View {
