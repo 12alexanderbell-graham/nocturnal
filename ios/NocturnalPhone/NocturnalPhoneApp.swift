@@ -19,18 +19,27 @@ private struct Root: View {
     @Environment(Computer.self) private var computer
 
     var body: some View {
-        ZStack {
-            // Slow when the computer changes state, quick while a finger drags the band.
-            Ground(awake: computer.groundLevel)
-                .animation(.smooth(duration: computer.hovering == nil ? 1.1 : 0.35), value: computer.groundLevel)
-            if computer.isPaired {
-                HomeView()
-                    .transition(.move(edge: .bottom))
-            } else {
-                PairView()
-                    .transition(.move(edge: .top))
+        // A navigation stack only for its bar: the buttons are system toolbar items, so iOS places them on every
+        // screen (the top bar on an iPhone, the side strip by the clock on iPhone Duo's outer screen).
+        NavigationStack {
+            ZStack {
+                if computer.isPaired {
+                    HomeView()
+                        .transition(.move(edge: .bottom))
+                } else {
+                    PairView()
+                        .transition(.move(edge: .top))
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                // Slow when the computer changes state, quick while a finger drags the band.
+                Ground(awake: computer.groundLevel)
+                    .animation(.smooth(duration: computer.hovering == nil ? 1.1 : 0.35), value: computer.groundLevel)
+                    .ignoresSafeArea()
+            }
+            .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+            .animation(Theme.grow, value: computer.isPaired)
         }
-        .animation(Theme.grow, value: computer.isPaired)
     }
 }

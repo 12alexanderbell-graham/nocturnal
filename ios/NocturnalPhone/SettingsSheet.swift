@@ -1,5 +1,29 @@
 import SwiftUI
 
+/// The settings as a system sheet: it zooms out of the gear, stops at half height or full, and has its own close
+/// button in its bar (on iPhone Duo's outer screen that bar stands down the side by the clock).
+struct SettingsPage: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                SettingsContent()
+                    .padding(.vertical, 12)
+            }
+            .scrollIndicators(.hidden)
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
+                        .accessibilityIdentifier("closeSettings")
+                }
+            }
+        }
+    }
+}
+
 /// Everything that isn't on the main screen, inside the glass sheet: what keeps the computer awake, what happens with
 /// the lid shut, when it sleeps, waking it from here, what each saving is worth, and this phone. Values and choices
 /// come from the computer (the same table its agents use); only the words live here.

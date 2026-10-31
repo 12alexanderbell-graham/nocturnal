@@ -1,54 +1,50 @@
 import SwiftUI
 
-/// The one screen. The ground is the state (green while the computer keeps working, night while it sleeps). Top: the
-/// head (Exit Demo on the left in the demo, the gear on the right) and a slot for notices. Middle: which computer,
-/// how fresh the news is, what it's doing, its numbers and what the lid-shut time has saved. Bottom: what the band is
-/// set to (or the Undo), the keep-awake band, and the main circle (sleep now, or wake it).
-/// The settings sheet grows out of the gear and pours back into it.
+/// The one screen. The ground is the state (green while the computer keeps working, night while it sleeps). The bar
+/// holds Exit Demo (in the demo) and Settings: system toolbar items, so iOS puts them where they belong on every
+/// screen (the top bar on an iPhone, the side strip by the clock on iPhone Duo's outer screen). Then a slot for
+/// notices; which computer, how fresh the news is, what it's doing, its numbers and what the lid-shut time has saved;
+/// what the band is set to (or the Undo), the keep-awake band and the main circle (sleep now, or wake it).
+/// On a wide screen (iPhone Duo open, iPad) the words and the controls stand side by side.
 struct HomeView: View {
     @Environment(Computer.self) private var computer
     @Environment(\.scenePhase) private var phase
-    @State private var sheet = SheetState()
-    @State private var gearFrame = CGRect.zero
+    @State private var settingsShown = false
+    @Namespace private var ns
 
     var body: some View {
-        GeometryReader { geo in
-            let safe = geo.safeAreaInsets
-            // Everything below is laid out in whole-screen points, safe areas included, so the sheet, the gear and
-            // the head are measured from the same origin.
-            let size = CGSize(width: geo.size.width + safe.leading + safe.trailing, height: geo.size.height + safe.top + safe.bottom)
-            // Side safe areas are kept clear: on iPhone Duo's outer screen the status bar and camera stand in a strip
-            // down the right side. The ground still fills the whole screen.
-            let free = size.width - safe.leading - safe.trailing
-            // On a wide screen (iPhone Duo open, or turned) everything stands in a phone-wide column in the middle.
-            let column = min(free, Theme.column)
-            // Where the screen reports no top inset (Duo's outer screen), the head still keeps off the edge.
-            let top = max(safe.top, Theme.bareTop)
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                GlassEffectContainer(spacing: 0) {
-                    ZStack(alignment: .topLeading) {
-                        content(context.date, size: CGSize(width: column, height: size.height), top: top, floor: safe.bottom)
-                            .frame(width: column, height: size.height)
-                            .inFreeArea(free, safe: safe, height: size.height)
-                        SettingsGlass(state: $sheet,
-                                      screen: CGSize(width: column, height: geo.frame(in: .global).maxY + safe.bottom),
-                                      gear: gearFrame)
-                            .frame(width: column, height: size.height)
-                            .inFreeArea(free, safe: safe, height: size.height)
-                        head
-                            .padding(.top, top + 2)
-                            .padding(.horizontal, Theme.side)
-                            .frame(width: column, alignment: .top)
-                            .inFreeArea(free, safe: safe)
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            GeometryReader { geo in
+                Group {
+                    if geo.size.width >= Theme.wide {
+                        wide(context.date, geo.size)
+                    } else {
+                        narrow(context.date)
                     }
-                    .frame(width: size.width, height: size.height, alignment: .topLeading)
                 }
-                .onChange(of: context.date) { _, now in if phase == .active { computer.tick(now) } }
+                .frame(width: geo.size.width, height: geo.size.height)
             }
-            .frame(width: size.width, height: size.height)
-            .ignoresSafeArea()
+            .onChange(of: context.date) { _, now in if phase == .active { computer.tick(now) } }
         }
         .foregroundStyle(.white)
+        .toolbar {
+            if computer.isDemo, !computer.isMarketing {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Exit Demo", systemImage: "xmark") { withAnimation(Theme.smooth) { computer.forget() } }
+                        .accessibilityIdentifier("exitDemo")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Settings", systemImage: "gearshape.fill") { settingsShown = true }
+                    .accessibilityIdentifier("settings")
+            }
+            .matchedTransitionSource(id: "settings", in: ns)
+        }
+        .sheet(isPresented: $settingsShown) {
+            SettingsPage()
+                .presentationDetents([.medium, .large])
+                .navigationTransition(.zoom(sourceID: "settings", in: ns))
+        }
         // Only a real trip to the background closes the stream: a glance at Notification Center (inactive) doesn't.
         .onChange(of: phase, initial: true) { old, now in
             if now == .active, old != .inactive || !computer.listening { computer.appeared() }
@@ -58,56 +54,46 @@ struct HomeView: View {
 
     // MARK: Layout
 
-    private func content(_ now: Date, size: CGSize, top: CGFloat, floor: CGFloat) -> some View {
-        let open = sheet.progress
-        return VStack(spacing: 0) {
-            Color.clear
-                .frame(height: Theme.head)
-                .padding(.top, top + 2)
+    /// A phone: one column under the bar.
+    private func narrow(_ now: Date) -> some View {
+        VStack(spacing: 0) {
             NoticeSlot(notice: notice)
                 .frame(height: 52)
-                .padding(.top, 8)
             Spacer(minLength: 8)
             hero(now)
-                // Words never sit under the sheet: they step up and back while it rises.
-                .scaleEffect(1 - 0.08 * open, anchor: .top)
-                .offset(y: -size.height * 0.16 * open - size.height * 0.6 * max(0, sheet.t - 1))
             Spacer(minLength: 8)
             figures
-                .offset(y: size.height * 0.5 * open)
             Spacer(minLength: 8)
             bottom
-                .offset(y: size.height * 0.5 * open)
-                .padding(.bottom, max(floor, 8) + Theme.bottom - 14)
+                .padding(.bottom, Theme.bottom - 14)
         }
         .padding(.horizontal, Theme.side)
+        .frame(maxWidth: Theme.column)
     }
 
-    private var head: some View {
-        HStack {
-            if computer.isDemo, !computer.isMarketing {
-                Button { withAnimation(Theme.smooth) { computer.forget() } } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "xmark").font(.system(size: 13, weight: .bold))
-                        Text("Exit Demo").font(.subheadline.weight(.semibold))
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(height: Theme.head)
-                    .contentShape(.capsule)
+    /// A wide screen: the words on the left, the numbers and the controls on the right.
+    private func wide(_ now: Date, _ size: CGSize) -> some View {
+        let half = min((size.width - Theme.side * 2 - Theme.split) / 2, Theme.column)
+        return VStack(spacing: 0) {
+            NoticeSlot(notice: notice)
+                .frame(height: 52)
+                .frame(maxWidth: half * 2 + Theme.split)
+            Spacer(minLength: 8)
+            HStack(alignment: .center, spacing: Theme.split) {
+                hero(now)
+                    .frame(width: half)
+                VStack(spacing: 36) {
+                    figures
+                    bottom
                 }
-                .buttonStyle(Press())
-                .glassEffect(.clear.interactive(), in: .capsule)
-                .accessibilityIdentifier("exitDemo")
+                .frame(width: half)
             }
-            Spacer()
-            // The sheet's glass pours out of the gear's glass (both sit in one glass container).
-            HeadCircle(symbol: "gearshape.fill", label: sheet.isOpen ? "Close settings" : "Settings", turns: sheet.turns) {
-                sheet.toggle()
-            }
-            .accessibilityIdentifier("settings")
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { gearFrame = $0 }
+            Spacer(minLength: 8)
+            // As tall as the notice slot, so the two columns sit in the middle of the screen.
+            Color.clear.frame(height: 52)
         }
-        .frame(height: Theme.head)
+        .padding(.horizontal, Theme.side)
+        .padding(.bottom, Theme.bottom)
     }
 
     private func hero(_ now: Date) -> some View {
@@ -253,15 +239,6 @@ struct HomeView: View {
 
 // MARK: Pieces
 
-private extension View {
-    /// Centred in the screen's free width, between the side safe areas.
-    func inFreeArea(_ free: CGFloat, safe: EdgeInsets, height: CGFloat? = nil) -> some View {
-        frame(width: free, height: height)
-            .padding(.leading, safe.leading)
-            .padding(.trailing, safe.trailing)
-    }
-}
-
 /// One number with its unit; rolls to new values. The unit says what it is; VoiceOver hears the full words.
 private struct Figure: View {
     let value: Double?
@@ -349,5 +326,5 @@ private struct ReadoutSlot: View {
 }
 
 #Preview {
-    HomeView().environment(Computer.preview).background(Ground(awake: 1))
+    NavigationStack { HomeView().background(Ground(awake: 1).ignoresSafeArea()) }.environment(Computer.preview)
 }

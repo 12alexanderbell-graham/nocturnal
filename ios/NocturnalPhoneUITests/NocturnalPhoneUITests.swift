@@ -55,7 +55,7 @@ final class NocturnalPhoneUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["It's asleep. Settings change once it wakes."].waitForExistence(timeout: 3), app.debugDescription)
         sleep(1)
         shot(app, "05b-asleep-settings")
-        app.buttons["settings"].tap()
+        app.buttons["closeSettings"].tap()
         sleep(1)
 
         // Wake it: the demo answers at once (a real sleeping computer picks it up at its next check-in).
@@ -65,7 +65,7 @@ final class NocturnalPhoneUITests: XCTestCase {
         sleep(1)
         shot(app, "06-woken")
 
-        // Settings grow out of the gear; pull up for the whole screen; tap the gear to close.
+        // Settings: a sheet out of the gear; pull up for the whole screen; close it.
         app.buttons["settings"].tap()
         XCTAssertTrue(app.staticTexts["Keeps it awake"].waitForExistence(timeout: 3), app.debugDescription)
         sleep(1)
@@ -82,7 +82,7 @@ final class NocturnalPhoneUITests: XCTestCase {
         shot(app, "10-settings-bottom")
         XCTAssertTrue(app.buttons["forget"].exists)
         XCTAssertTrue(app.staticTexts["Busy apps"].exists || app.staticTexts["On the computer"].exists, app.debugDescription)
-        app.buttons["settings"].tap()
+        app.buttons["closeSettings"].tap()
         sleep(1)
         XCTAssertFalse(app.staticTexts["Keeps it awake"].isHittable)
         shot(app, "11-settings-closed")
@@ -157,7 +157,7 @@ final class NocturnalPhoneUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Keeps it awake"].waitForExistence(timeout: 3), app.debugDescription)
         sleep(2)
         shot(app, "m2-settings")
-        app.buttons["settings"].tap()
+        app.buttons["closeSettings"].tap()
         sleep(1)
         app.buttons["main"].tap()
         XCTAssertTrue(wait(app.staticTexts["headline"], contains: "Asleep", timeout: 8), app.debugDescription)
@@ -276,5 +276,7 @@ final class NocturnalPhoneUITests: XCTestCase {
             .appendingPathComponent("Developer/Nocturnal/dist/review/phone")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try? s.pngRepresentation.write(to: dir.appendingPathComponent(name + ".png"))
+        // Every element's frame too, so the layout can be checked where a picture can't be taken.
+        try? app.debugDescription.write(to: dir.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
     }
 }

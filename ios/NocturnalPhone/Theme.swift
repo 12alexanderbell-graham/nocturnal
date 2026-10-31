@@ -15,9 +15,9 @@ enum Theme {
     static let gap: CGFloat = 8
     /// The widest the content gets: on a wider screen (iPhone Duo open or turned) it's a column in the middle.
     static let column: CGFloat = 500
-    /// The top margin where the screen reports none (iPhone Duo's outer screen, whose status bar stands down the
-    /// right side): level with the top of that status bar.
-    static let bareTop: CGFloat = 22
+    /// From this width (iPhone Duo open and turned, iPad) the screens use two columns side by side, this far apart.
+    static let wide: CGFloat = 760
+    static let split: CGFloat = 56
     static let sheetInset: CGFloat = 8
     static let screenCorner: CGFloat = 62
     static var sheetCorner: CGFloat { screenCorner - sheetInset }
@@ -75,28 +75,5 @@ struct Press: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1)
             .animation(configuration.isPressed ? .easeOut(duration: 0.09) : .easeOut(duration: 0.26), value: configuration.isPressed)
-    }
-}
-
-/// A 44 pt glass circle with one symbol, for the head.
-struct HeadCircle: View {
-    let symbol: String
-    let label: String
-    var turns: Double = 0
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 18, weight: .semibold))
-                .rotationEffect(.degrees(turns * 120))
-                .frame(width: Theme.head, height: Theme.head)
-                .contentShape(.circle)
-        }
-        .buttonStyle(Press())
-        .foregroundStyle(.white)
-        .glassEffect(.clear.interactive(), in: .circle)
-        .animation(Theme.grow, value: turns)
-        .accessibilityLabel(label)
     }
 }
