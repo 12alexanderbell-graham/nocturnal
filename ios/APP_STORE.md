@@ -64,7 +64,7 @@ First release.
 > - Widgets: add Nocturnal from the widget gallery (small, medium, and the Lock Screen sizes). In the demo they show the demo computer, and the medium widget's Always awake button changes its mode.
 > - Live Activity: tap 2 on the band (two hours). The Lock Screen and Dynamic Island count down to the end. Tap When busy to end it.
 >
-> Leave the demo with Exit Demo at the top left. No account or login exists. The camera is used only to scan the pairing code.
+> Leave the demo with the X at the top left (Exit Demo). On iPhone Duo's outer screen iOS puts the gear, Back and the X in the strip under the clock; when it is open, the screen shows two columns. No account or login exists. The camera is used only to scan the pairing code.
 
 ## App Privacy
 

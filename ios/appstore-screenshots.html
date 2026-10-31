@@ -12,9 +12,15 @@ h1{position:absolute;left:28px;right:28px;top:78px;margin:0;color:#fff;font-weig
 .row{display:flex;gap:14px;align-items:center}
 .lock{background:rgba(255,255,255,.08);border-radius:26px;padding:12px;display:flex;gap:12px;align-items:center}
 .lock img{box-shadow:none;border-radius:14px}
+/* iPhone Duo's outer screen (1398 × 2034 at 3×): shorter, so a smaller title and the picture higher up. */
+.duo,.duo body{width:466px;height:678px}
+.duo h1{top:40px;font-size:31px;left:34px;right:34px}
+.duo .shot{top:150px;width:344px;border-radius:30px}
+.duo .wid{top:136px;transform:scale(.68);transform-origin:top center}
 </style></head><body><div id="bg" class="g"></div><h1 id="t"></h1><div id="c"></div>
 <script>
 const P='';   // the images from dist/review/phone and dist/review/widgets, copied next to this page
+if(location.hash=='#duo')document.documentElement.className='duo';
 window.show=(k)=>{
  const S={
   1:['g','Close the lid.<br>Your AI keeps working.','m1-home'],
@@ -27,7 +33,7 @@ window.show=(k)=>{
  if(S[2]) c.innerHTML=`<div class="shot"><img src="${P+S[2]}.png"></div>`;
  else c.innerHTML=`<div class="wid">
    <img src="${P}medium-working.png" style="width:392px">
-   <div class="row"><img src="${P}small-waiting.png" style="width:189px"><img src="${P}small-asleep.png" style="width:189px"></div>
+   <div class="row"><img src="${P}small-working.png" style="width:189px"><img src="${P}small-asleep.png" style="width:189px"></div>
    <img src="${P}live-activity.png" style="width:392px;border-radius:26px">
    <div class="lock"><img src="${P}lock-circle-working.png" style="width:86px"><img src="${P}lock-rect-working.png" style="width:196px"></div></div>`;
 };
