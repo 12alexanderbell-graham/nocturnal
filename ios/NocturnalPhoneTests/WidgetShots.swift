@@ -15,13 +15,13 @@ struct WidgetShots {
         asleep.checkIn = 15
         asleep.demo = false
         asleep.at = Date().addingTimeInterval(-40 * 60)
-        var waiting = Status.sample
-        waiting.line = "Codex is waiting for you"
-        waiting.mode = "on"
-        waiting.demo = false
+        var always = Status.sample
+        always.mode = "on"
+        always.until = Date().addingTimeInterval(2 * 3600)
+        always.demo = false
         let states: [(String, StatusEntry)] = [
             ("working", StatusEntry(date: Date(), status: { var s = Status.sample; s.demo = false; return s }(), paired: true)),
-            ("waiting", StatusEntry(date: Date(), status: waiting, paired: true)),
+            ("always", StatusEntry(date: Date(), status: always, paired: true)),
             ("asleep", StatusEntry(date: Date(), status: asleep, paired: true)),
             ("unpaired", StatusEntry(date: Date(), status: nil, paired: false)),
         ]

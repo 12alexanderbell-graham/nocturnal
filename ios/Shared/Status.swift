@@ -15,7 +15,8 @@ nonisolated struct Status: Codable, Equatable, Sendable {
     var host: String
     var state: State
     var headline: String
-    /// Who is working or waiting, or the computer's own reason.
+    /// A word from a widget button just pressed ("Wake sent…", or what went wrong). Empty otherwise: the widgets
+    /// say what the computer is doing from the fields below, not which agent is busy.
     var line: String
     var mode: String            // "off", "auto" or "on"
     /// The end of a timed keep-awake.
@@ -24,6 +25,8 @@ nonisolated struct Status: Codable, Equatable, Sendable {
     var watts: Double?
     var hours: Double?
     var plugged = false
+    /// Optional so a status saved by an older build still reads.
+    var lidClosed: Bool?
     /// Minutes between a sleeping computer's check-ins (0: it can't be woken from the phone).
     var checkIn = 0
     var wakeFor = 60
@@ -40,7 +43,7 @@ nonisolated struct Status: Codable, Equatable, Sendable {
         case .asleep: "Asleep"
         case .silent: "Not answering"
         }
-        line = state == .asleep ? "" : p.agentLine
+        line = ""
         mode = p.mode
         until = p.mode == "on" ? p.alwaysUntil.flatMap { Clock.date($0, after: at) } : nil
         let f = p.figures
@@ -48,6 +51,7 @@ nonisolated struct Status: Codable, Equatable, Sendable {
         watts = f?.w
         hours = f?.h
         plugged = f?.plugged ?? false
+        lidClosed = p.lidClosed
         checkIn = p.checkIn ?? 0
         wakeFor = p.wakeFor ?? 60
         self.at = at
@@ -55,6 +59,27 @@ nonisolated struct Status: Codable, Equatable, Sendable {
     }
 
     var awake: Bool { state == .working }
+
+    /// The quiet line under the state: a button's answer if there is one; since when it sleeps; when it was last
+    /// heard once the news is old; otherwise how it's set and how long the battery lasts ("Lid shut · 19 h left").
+    func detail(at now: Date) -> String {
+        if !line.isEmpty { return line }
+        let time = at.formatted(date: .omitted, time: .shortened)
+        if state == .asleep { return "Since " + time }
+        if state == .silent || (!demo && now.timeIntervalSince(at) > 20 * 60) { return "Last heard at " + time }
+        var parts: [String] = []
+        if state == .working, let until, until > now {
+            parts.append("Until " + until.formatted(date: .omitted, time: .shortened))
+        } else if lidClosed == true {
+            parts.append("Lid shut")
+        }
+        if plugged {
+            parts.append("Plugged in")
+        } else if let hours, hours > 0 {
+            parts.append((hours < 1 ? "\(max(1, Int((hours * 60).rounded()))) min" : "\(Int(hours.rounded())) h") + " left")
+        }
+        return parts.joined(separator: " · ")
+    }
 }
 
 /// The status in the app group, shared by the app and the widgets.

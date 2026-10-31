@@ -21,7 +21,8 @@ struct PairView: View {
             VStack(spacing: 0) {
                 head
                     .frame(height: Theme.head)
-                    .padding(.top, 2)
+                    // Where the screen reports no top inset (Duo's outer screen), keep off the edge anyway.
+                    .padding(.top, 2 + max(0, Theme.bareTop - geo.safeAreaInsets.top))
                 if step == .welcome { welcome } else { pair(geo.size) }
                 bottom
                     .padding(.bottom, Theme.bottom - 14)
@@ -38,20 +39,34 @@ struct PairView: View {
 
     // MARK: Head
 
+    /// One row, like a navigation bar: Back on the left and, while pairing, the mark and the name in the middle.
     private var head: some View {
-        HStack {
+        ZStack {
             if step == .pair {
-                HeadCircle(symbol: "chevron.left", label: "Back") {
-                    typing = false
-                    fieldFocused = false
-                    code = ""
-                    error = nil
-                    step = .welcome
+                HStack(spacing: 10) {
+                    mark(size: 34)
+                    Text("Nocturnal")
+                        .font(.system(.title3, weight: .bold))
+                        .matchedGeometryEffect(id: "name", in: ns)
                 }
-                .transition(.offset(x: -24).combined(with: .scale(scale: 0.8)))
-                .accessibilityIdentifier("back")
+                .padding(.horizontal, Theme.head + 8)   // never under the back button
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             }
-            Spacer()
+            HStack {
+                if step == .pair {
+                    HeadCircle(symbol: "chevron.left", label: "Back") {
+                        typing = false
+                        fieldFocused = false
+                        code = ""
+                        error = nil
+                        step = .welcome
+                    }
+                    .transition(.offset(x: -24).combined(with: .scale(scale: 0.8)))
+                    .accessibilityIdentifier("back")
+                }
+                Spacer()
+            }
         }
     }
 
@@ -84,13 +99,6 @@ struct PairView: View {
     private func pair(_ size: CGSize) -> some View {
         let side = min(size.width - Theme.side * 2 - 24, size.height * 0.42)
         return VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                mark(size: 44)
-                Text("Nocturnal")
-                    .font(.system(.title2, weight: .bold))
-                    .matchedGeometryEffect(id: "name", in: ns)
-            }
-            .padding(.top, 8)
             Spacer(minLength: 12)
             CameraFinder(found: pairFrom)
                 .frame(width: side, height: side)

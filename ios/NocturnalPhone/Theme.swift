@@ -15,6 +15,9 @@ enum Theme {
     static let gap: CGFloat = 8
     /// The widest the content gets: on a wider screen (iPhone Duo open or turned) it's a column in the middle.
     static let column: CGFloat = 500
+    /// The top margin where the screen reports none (iPhone Duo's outer screen, whose status bar stands down the
+    /// right side): level with the top of that status bar.
+    static let bareTop: CGFloat = 22
     static let sheetInset: CGFloat = 8
     static let screenCorner: CGFloat = 62
     static var sheetCorner: CGFloat { screenCorner - sheetInset }

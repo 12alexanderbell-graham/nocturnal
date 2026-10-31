@@ -77,32 +77,26 @@ private struct Top: View {
     }
 }
 
-/// "Keeps working" over "Claude Code is working".
+/// "Keeps working" over "Lid shut · 19 h left".
 private struct Summary: View {
     let status: Status
     let now: Date
 
     var body: some View {
+        let detail = status.detail(at: now)
         VStack(alignment: .leading, spacing: 2) {
             Text(status.headline)
                 .font(.system(.title3, weight: .bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
-            if !quiet.isEmpty {
-                Text(quiet)
+            if !detail.isEmpty {
+                Text(detail)
                     .font(.footnote.weight(.medium))
+                    .monospacedDigit()
                     .lineLimit(2)
                     .opacity(0.75)
             }
         }
-    }
-
-    /// Who is working, or since when it sleeps; when the status has gone stale, when it was last heard instead.
-    private var quiet: String {
-        let time = status.at.formatted(date: .omitted, time: .shortened)
-        if status.state == .asleep { return "Since " + time }
-        if !status.demo, now.timeIntervalSince(status.at) > 20 * 60 { return "Last heard at " + time }
-        return status.line
     }
 }
 
@@ -222,7 +216,8 @@ struct StatusRectangular: View {
                 Label(s.headline, systemImage: s.symbol)
                     .font(.headline)
                     .widgetAccentable()
-                Text(s.line.isEmpty ? s.figuresLine : s.line).font(.subheadline).lineLimit(1)
+                let detail = s.detail(at: entry.date)
+                Text(detail.isEmpty ? s.figuresLine : detail).font(.subheadline).lineLimit(1)
             } else {
                 Label("Nocturnal", systemImage: "laptopcomputer").font(.headline)
                 Text(entry.paired ? "Open the app" : "Pair in the app").font(.subheadline)

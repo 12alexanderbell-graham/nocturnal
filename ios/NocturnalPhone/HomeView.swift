@@ -17,25 +17,29 @@ struct HomeView: View {
             // Everything below is laid out in whole-screen points, safe areas included, so the sheet, the gear and
             // the head are measured from the same origin.
             let size = CGSize(width: geo.size.width + safe.leading + safe.trailing, height: geo.size.height + safe.top + safe.bottom)
-            // On a wide screen (iPhone Duo open, or turned) everything stands in a phone-wide column in the middle;
-            // the ground still fills the screen.
-            let column = min(size.width, Theme.column)
+            // Side safe areas are kept clear: on iPhone Duo's outer screen the status bar and camera stand in a strip
+            // down the right side. The ground still fills the whole screen.
+            let free = size.width - safe.leading - safe.trailing
+            // On a wide screen (iPhone Duo open, or turned) everything stands in a phone-wide column in the middle.
+            let column = min(free, Theme.column)
+            // Where the screen reports no top inset (Duo's outer screen), the head still keeps off the edge.
+            let top = max(safe.top, Theme.bareTop)
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 GlassEffectContainer(spacing: 0) {
                     ZStack(alignment: .topLeading) {
-                        content(context.date, size: CGSize(width: column, height: size.height), safe: safe)
+                        content(context.date, size: CGSize(width: column, height: size.height), top: top, floor: safe.bottom)
                             .frame(width: column, height: size.height)
-                            .frame(width: size.width, height: size.height)
+                            .inFreeArea(free, safe: safe, height: size.height)
                         SettingsGlass(state: $sheet,
                                       screen: CGSize(width: column, height: geo.frame(in: .global).maxY + safe.bottom),
                                       gear: gearFrame)
                             .frame(width: column, height: size.height)
-                            .frame(width: size.width, height: size.height)
+                            .inFreeArea(free, safe: safe, height: size.height)
                         head
-                            .padding(.top, safe.top + 2)
+                            .padding(.top, top + 2)
                             .padding(.horizontal, Theme.side)
                             .frame(width: column, alignment: .top)
-                            .frame(width: size.width, alignment: .top)
+                            .inFreeArea(free, safe: safe)
                     }
                     .frame(width: size.width, height: size.height, alignment: .topLeading)
                 }
@@ -54,12 +58,12 @@ struct HomeView: View {
 
     // MARK: Layout
 
-    private func content(_ now: Date, size: CGSize, safe: EdgeInsets) -> some View {
+    private func content(_ now: Date, size: CGSize, top: CGFloat, floor: CGFloat) -> some View {
         let open = sheet.progress
         return VStack(spacing: 0) {
             Color.clear
                 .frame(height: Theme.head)
-                .padding(.top, safe.top + 2)
+                .padding(.top, top + 2)
             NoticeSlot(notice: notice)
                 .frame(height: 52)
                 .padding(.top, 8)
@@ -74,7 +78,7 @@ struct HomeView: View {
             Spacer(minLength: 8)
             bottom
                 .offset(y: size.height * 0.5 * open)
-                .padding(.bottom, max(safe.bottom, 8) + Theme.bottom - 14)
+                .padding(.bottom, max(floor, 8) + Theme.bottom - 14)
         }
         .padding(.horizontal, Theme.side)
     }
@@ -248,6 +252,15 @@ struct HomeView: View {
 }
 
 // MARK: Pieces
+
+private extension View {
+    /// Centred in the screen's free width, between the side safe areas.
+    func inFreeArea(_ free: CGFloat, safe: EdgeInsets, height: CGFloat? = nil) -> some View {
+        frame(width: free, height: height)
+            .padding(.leading, safe.leading)
+            .padding(.trailing, safe.trailing)
+    }
+}
 
 /// One number with its unit; rolls to new values. The unit says what it is; VoiceOver hears the full words.
 private struct Figure: View {
